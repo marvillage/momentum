@@ -1,0 +1,115 @@
+// Momentum — personal daily operator
+// Local dev uses SQLite. For Vercel, switch provider to "postgresql"
+// and point DATABASE_URL at a free Neon database, then run `prisma db push`.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// A recurring thing you do: "LeetCode 4/day", "Striver course", "Gym", "Medium 3/week".
+model Activity {
+  id           String         @id @default(cuid())
+  slug         String         @unique
+  area         String // DSA | ML | CAREER | GYM | WRITING | X | MATIKS | HABIT
+  name         String
+  cadence      String         @default("DAILY") // DAILY | WEEKDAYS | WEEKLY | DAYS
+  daysOfWeek   String? // CSV of 1..7 (Mon..Sun) when cadence = DAYS
+  targetCount  Int            @default(1)
+  minCount     Int? // e.g. LeetCode min 3
+  weeklyTarget Int? // e.g. Medium 3/week
+  unit         String? // "questions" | "video" | "story" ...
+  active       Boolean        @default(true)
+  sortOrder    Int            @default(0)
+  meta         String? // JSON blob for module-specific config
+  items        Item[]
+  tasks        TaskInstance[]
+  createdAt    DateTime       @default(now())
+}
+
+// Ordered catalog content fed into an Activity: a Striver problem, an ML video, an LLD pattern.
+model Item {
+  id         String         @id @default(cuid())
+  activityId String
+  activity   Activity       @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  title      String
+  url        String?
+  order      Int            @default(0)
+  done       Boolean        @default(false)
+  meta       String?
+  tasks      TaskInstance[]
+  createdAt  DateTime       @default(now())
+
+  @@index([activityId])
+}
+
+// One generated occurrence for a date — the heart of the planner + backlog.
+model TaskInstance {
+  id          String    @id @default(cuid())
+  activityId  String
+  activity    Activity  @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  itemId      String?
+  item        Item?     @relation(fields: [itemId], references: [id])
+  date        String // YYYY-MM-DD (the day it's scheduled for)
+  status      String    @default("PENDING") // PENDING | DONE | SKIPPED
+  count       Int       @default(0) // progress toward target
+  carriedFrom String? // original date if rolled into backlog
+  note        String?
+  completedAt DateTime?
+  sets        GymSet[]
+  createdAt   DateTime  @default(now())
+
+  @@index([date])
+  @@index([activityId, date])
+}
+
+model GymSet {
+  id        String       @id @default(cuid())
+  taskId    String
+  task      TaskInstance @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  exercise  String
+  setNo     Int
+  reps      Int
+  weight    Float
+  createdAt DateTime     @default(now())
+}
+
+// Your prescribed split: which exercises (with target weight) on which weekday.
+model GymExercise {
+  id        String   @id @default(cuid())
+  dow       Int // 1 = Mon ... 7 = Sun
+  name      String
+  sets      Int      @default(3)
+  reps      Int      @default(8)
+  weight    Float    @default(0)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([dow])
+}
+
+model BodyWeight {
+  id        String   @id @default(cuid())
+  date      String
+  kg        Float
+  createdAt DateTime @default(now())
+}
+
+model Channel {
+  id        String   @id @default(cuid())
+  kind      String // TELEGRAM | EMAIL | WEBPUSH
+  target    String // chat id | email | subscription JSON
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model Settings {
+  id          Int    @id @default(1)
+  timezone    String @default("Asia/Kolkata")
+  morningPush String @default("07:30")
+  eveningPush String @default("21:00")
+}
