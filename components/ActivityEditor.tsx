@@ -102,7 +102,10 @@ export function ActivityEditor({ activity, groups }: { activity: Activity; group
       router.refresh();
     });
 
-  const remaining = a.items.filter((i) => !i.done).length;
+  // Read the queue from the live prop (refreshed after upload/import/delete)
+  // so newly added items appear without a full page reload.
+  const items = activity.items;
+  const remaining = items.filter((i) => !i.done).length;
 
   return (
     <div className={`space-y-8 ${pending ? "opacity-70" : ""}`}>
@@ -157,8 +160,11 @@ export function ActivityEditor({ activity, groups }: { activity: Activity; group
               type="number"
               min={1}
               className={fieldCls}
-              value={a.targetCount}
-              onChange={(e) => patch({ targetCount: Math.max(1, parseInt(e.target.value || "1", 10)) })}
+              defaultValue={a.targetCount}
+              onBlur={(e) => {
+                const v = Math.max(1, parseInt(e.target.value || "1", 10));
+                if (v !== a.targetCount) patch({ targetCount: v });
+              }}
             />
           </label>
           <label className="flex flex-col gap-1.5">
@@ -167,9 +173,12 @@ export function ActivityEditor({ activity, groups }: { activity: Activity; group
               type="number"
               min={0}
               className={fieldCls}
-              value={a.minCount ?? ""}
+              defaultValue={a.minCount ?? ""}
               placeholder="—"
-              onChange={(e) => patch({ minCount: e.target.value ? parseInt(e.target.value, 10) : null })}
+              onBlur={(e) => {
+                const v = e.target.value ? parseInt(e.target.value, 10) : null;
+                if (v !== a.minCount) patch({ minCount: v });
+              }}
             />
           </label>
         </div>
@@ -245,7 +254,7 @@ export function ActivityEditor({ activity, groups }: { activity: Activity; group
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-black uppercase tracking-widest text-lime">Content queue</h2>
           <span className="text-xs font-bold text-muted uppercase">
-            {a.items.length} items · {remaining} left
+            {items.length} items · {remaining} left
           </span>
         </div>
         <p className="text-muted text-sm">
@@ -289,9 +298,9 @@ export function ActivityEditor({ activity, groups }: { activity: Activity; group
           </button>
         </div>
 
-        {a.items.length > 0 && (
+        {items.length > 0 && (
           <div className="rounded-xl border border-line divide-y divide-line max-h-80 overflow-y-auto">
-            {a.items.map((it) => (
+            {items.map((it) => (
               <div key={it.id} className="flex items-center gap-2 px-3 py-2 text-sm">
                 <span className="text-muted text-xs w-6 shrink-0">{it.order + 1}</span>
                 <span className={`flex-1 truncate ${it.done ? "line-through text-muted" : ""}`}>{it.title}</span>
