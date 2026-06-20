@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { ProfileClient } from "@/components/ProfileClient";
+import { PushToggle } from "@/components/PushToggle";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,7 @@ export default async function ProfilePage() {
         morningPush={settings?.morningPush ?? "07:30"}
         eveningPush={settings?.eveningPush ?? "21:00"}
       />
+      <PushToggle />
     </div>
   );
 }

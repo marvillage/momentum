@@ -22,7 +22,10 @@ export async function Nav() {
     : [];
 
   return (
-    <header className="sticky top-0 z-50 border-b border-line bg-ground/85 backdrop-blur">
+    <header
+      className="sticky top-0 z-50 border-b border-line bg-ground/85 backdrop-blur"
+      style={{ paddingTop: "env(safe-area-inset-top)" }}
+    >
       <div className="max-w-3xl mx-auto px-5 h-16 flex items-center justify-between gap-4">
         <Link href="/" className="font-black text-xl tracking-tight shrink-0">
           MO<span className="text-lime">/</span>MENTUM

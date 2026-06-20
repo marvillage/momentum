@@ -28,7 +28,12 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en" className={`${geist.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-ground text-ink">
         <Nav />
-        <main className="flex-1 w-full max-w-3xl mx-auto px-5 pb-24 pt-8">{children}</main>
+        <main
+          className="flex-1 w-full max-w-3xl mx-auto px-5 pt-8"
+          style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom))" }}
+        >
+          {children}
+        </main>
       </body>
     </html>
   );
