@@ -41,6 +41,7 @@ export default async function ActivityDetail({ params }: { params: Promise<{ id:
           minCount: a.minCount,
           unit: a.unit,
           active: a.active,
+          rollover: a.rollover,
           items: a.items.map((i) => ({ id: i.id, title: i.title, url: i.url, done: i.done, order: i.order })),
         }}
       />

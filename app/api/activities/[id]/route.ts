@@ -4,7 +4,7 @@ import { apiUserId } from "@/lib/auth";
 
 const EDITABLE = [
   "name", "area", "type", "icon", "groupId", "cadence", "daysOfWeek", "everyNDays",
-  "durationMin", "targetCount", "minCount", "weeklyTarget", "unit", "active", "sortOrder",
+  "durationMin", "targetCount", "minCount", "weeklyTarget", "unit", "active", "rollover", "sortOrder",
 ];
 
 async function own(id: string, userId: string) {

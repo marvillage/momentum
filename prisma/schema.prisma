@@ -126,6 +126,7 @@ model Activity {
   weeklyTarget Int? // e.g. Medium 3/week
   unit         String? // "questions" | "video" | "story" ...
   active       Boolean        @default(true)
+  rollover     Boolean        @default(true) // unfinished days roll to backlog; if false they just lapse
   sortOrder    Int            @default(0)
   meta         String? // JSON blob for module-specific config
   items        Item[]

@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 type BatchItem = { id: string; title: string; url: string | null };
@@ -10,6 +10,7 @@ type Task = {
   count: number;
   date: string;
   carriedFrom: string | null;
+  note?: string | null;
   activity: {
     name: string;
     area: string;
@@ -26,6 +27,8 @@ type Task = {
 export function TaskRow({ task, overdue = false }: { task: Task; overdue?: boolean }) {
   const router = useRouter();
   const [pending, start] = useTransition();
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [note, setNote] = useState(task.note ?? "");
 
   const done = task.status === "DONE";
   const target = task.activity.targetCount ?? 1;
@@ -43,6 +46,17 @@ export function TaskRow({ task, overdue = false }: { task: Task; overdue?: boole
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ action, itemId }),
       });
+      router.refresh();
+    });
+
+  const saveNote = () =>
+    start(async () => {
+      await fetch(`/api/tasks/${task.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "note", note }),
+      });
+      setNoteOpen(false);
       router.refresh();
     });
 
@@ -89,7 +103,25 @@ export function TaskRow({ task, overdue = false }: { task: Task; overdue?: boole
             +1
           </button>
         )}
+        <button onClick={() => setNoteOpen((o) => !o)} className="shrink-0 text-sm text-muted hover:text-lime px-1" title="Note" aria-label="Note">
+          📝
+        </button>
       </div>
+
+      {noteOpen && (
+        <div className="mt-2 ml-10 flex gap-2">
+          <input
+            className="flex-1 bg-surface2 border border-line rounded-md px-2.5 py-1.5 text-sm outline-none focus:border-lime"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Add a note…"
+            onKeyDown={(e) => e.key === "Enter" && saveNote()}
+            autoFocus
+          />
+          <button onClick={saveNote} className="bg-lime text-ground font-black uppercase text-[11px] px-3 rounded-md">Save</button>
+        </div>
+      )}
+      {!noteOpen && task.note && <div className="mt-1.5 ml-10 text-muted text-xs italic">📝 {task.note}</div>}
 
       {/* content batch: today's specific items, each tappable + checkable */}
       {batch.length > 0 && !done && (

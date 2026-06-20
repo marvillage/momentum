@@ -21,6 +21,7 @@ type Activity = {
   minCount: number | null;
   unit: string | null;
   active: boolean;
+  rollover: boolean;
   items: Item[];
 };
 
@@ -172,14 +173,24 @@ export function ActivityEditor({ activity, groups }: { activity: Activity; group
           </div>
         )}
 
-        <button
-          onClick={() => patch({ active: !a.active })}
-          className={`text-xs font-black uppercase px-3 py-2 rounded-lg border ${
-            a.active ? "bg-lime/15 text-lime border-lime/40" : "bg-surface2 text-muted border-line"
-          }`}
-        >
-          {a.active ? "Active — showing in Today" : "Paused — hidden from Today"}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => patch({ active: !a.active })}
+            className={`text-xs font-black uppercase px-3 py-2 rounded-lg border ${
+              a.active ? "bg-lime/15 text-lime border-lime/40" : "bg-surface2 text-muted border-line"
+            }`}
+          >
+            {a.active ? "Active — showing in Today" : "Paused — hidden from Today"}
+          </button>
+          <button
+            onClick={() => patch({ rollover: !a.rollover })}
+            className={`text-xs font-black uppercase px-3 py-2 rounded-lg border ${
+              a.rollover ? "bg-lime/15 text-lime border-lime/40" : "bg-surface2 text-muted border-line"
+            }`}
+          >
+            {a.rollover ? "Rolls to backlog" : "No backlog — just lapses"}
+          </button>
+        </div>
       </div>
 
       {/* content queue */}

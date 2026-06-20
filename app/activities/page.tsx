@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { NewActivity } from "@/components/NewActivity";
 import { GroupManager } from "@/components/GroupManager";
+import { ManageActivityList } from "@/components/ManageActivityList";
 import { TRACK_SUMMARY } from "@/lib/tracks";
 import { requireUser } from "@/lib/auth";
 
@@ -51,24 +51,13 @@ export default async function Activities() {
         {buckets.filter((b) => b.items.length > 0).map((b) => (
           <div key={b.key}>
             <h3 className="text-xs font-black uppercase tracking-widest text-muted mb-2">{b.label} · {b.items.length}</h3>
-            <div className="rounded-2xl border border-line divide-y divide-line overflow-hidden bg-surface">
-              {b.items.map((a) => (
-                <Link key={a.id} href={`/activities/${a.id}`} className="flex items-center justify-between gap-3 px-4 py-3.5 hover:bg-surface2 transition-colors">
-                  <div className="min-w-0">
-                    <div className="font-bold truncate">{a.icon ? `${a.icon} ` : ""}{a.name}</div>
-                    <div className="text-muted text-[11px] uppercase tracking-wide font-semibold mt-0.5">
-                      {a.type} · {a.cadence}{a.everyNDays ? ` ${a.everyNDays}d` : ""} · target {a.targetCount}
-                      {a.minCount ? ` (min ${a.minCount})` : ""}
-                      {a.durationMin ? ` · ${a.durationMin}m` : ""}
-                      {a._count.items > 0 ? ` · ${a._count.items} queued` : ""}
-                    </div>
-                  </div>
-                  <span className={`shrink-0 text-[11px] font-black uppercase px-2 py-1 rounded ${a.active ? "bg-lime/15 text-lime" : "bg-surface2 text-muted"}`}>
-                    {a.active ? "on" : "off"}
-                  </span>
-                </Link>
-              ))}
-            </div>
+            <ManageActivityList
+              items={b.items.map((a) => ({
+                id: a.id, name: a.name, icon: a.icon, type: a.type, cadence: a.cadence,
+                everyNDays: a.everyNDays, targetCount: a.targetCount, minCount: a.minCount,
+                durationMin: a.durationMin, itemCount: a._count.items, active: a.active, sortOrder: a.sortOrder,
+              }))}
+            />
           </div>
         ))}
       </div>

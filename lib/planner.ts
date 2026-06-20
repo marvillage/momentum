@@ -91,7 +91,7 @@ export async function getDashboard(userId: string, opts: { groupId?: string } = 
       userId,
       status: "PENDING",
       date: { lt: today },
-      activity: { cadence: { not: "WEEKLY" }, ...actFilter },
+      activity: { cadence: { not: "WEEKLY" }, rollover: true, ...actFilter },
     },
     include: { activity: true, item: true },
     orderBy: [{ date: "asc" }],

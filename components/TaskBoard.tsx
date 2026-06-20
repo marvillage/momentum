@@ -11,6 +11,7 @@ function serialize(t: Task) {
     count: t.count,
     date: t.date,
     carriedFrom: t.carriedFrom,
+    note: t.note,
     activity: {
       name: t.activity.name,
       area: t.activity.area,
