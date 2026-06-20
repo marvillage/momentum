@@ -30,7 +30,22 @@ model User {
   workouts     WorkoutRating[]
   savedMeals   SavedMeal[]
   waterLogs    WaterLog[]
+  setLogs      SetLog[]
   settings     Settings?
+}
+
+// A logged working set: what you actually lifted on a given day.
+model SetLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      String // YYYY-MM-DD
+  exercise  String // denormalized name (survives exercise edits/deletes)
+  reps      Int
+  weight    Float
+  createdAt DateTime @default(now())
+
+  @@index([userId, date])
 }
 
 // A reusable meal the user has logged before — one-tap quick-add.

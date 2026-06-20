@@ -10,10 +10,11 @@ export default async function GymPage() {
   const user = await requireUser();
   const today = dowOf(todayStr());
   const todayDate = todayStr();
-  const [exercises, weights, ratings] = await Promise.all([
+  const [exercises, weights, ratings, todaySets] = await Promise.all([
     prisma.gymExercise.findMany({ where: { userId: user.id }, orderBy: [{ dow: "asc" }, { order: "asc" }] }),
     prisma.bodyWeight.findMany({ where: { userId: user.id }, orderBy: { date: "asc" }, take: 60 }),
     prisma.workoutRating.findMany({ where: { userId: user.id }, orderBy: { date: "desc" }, take: 30 }),
+    prisma.setLog.findMany({ where: { userId: user.id, date: todayDate }, orderBy: { createdAt: "asc" } }),
   ]);
   const todayLabel = DOW.find((d) => d.n === today)?.label ?? "";
   const todayRating = ratings.find((r) => r.date === todayDate)?.intensity ?? null;
@@ -31,6 +32,7 @@ export default async function GymPage() {
         weights={weights.map((w) => ({ date: w.date, kg: w.kg }))}
         todayRating={todayRating}
         ratings={ratings.map((r) => ({ date: r.date, intensity: r.intensity }))}
+        todaySets={todaySets.map((s) => ({ id: s.id, exercise: s.exercise, reps: s.reps, weight: s.weight }))}
       />
     </div>
   );
