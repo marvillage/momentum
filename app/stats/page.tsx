@@ -1,14 +1,28 @@
 import { getStats } from "@/lib/stats";
 import { getGameState } from "@/lib/game";
+import { getModuleStats } from "@/lib/modulestats";
 import { Heatmap } from "@/components/Heatmap";
 import { RankBadge } from "@/components/RankBadge";
 import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
+function Stat({ value, label, accent }: { value: string | number; label: string; accent?: boolean }) {
+  return (
+    <div className="rounded-2xl border border-line bg-surface p-4 text-center">
+      <div className={`text-2xl font-black ${accent ? "text-lime" : ""}`}>{value}</div>
+      <div className="text-muted text-[10px] font-bold uppercase tracking-widest mt-1 leading-tight">{label}</div>
+    </div>
+  );
+}
+
 export default async function StatsPage() {
   const user = await requireUser();
-  const [{ totals, perActivity, heatmap, byWeekday }, game] = await Promise.all([getStats(user.id), getGameState(user.id)]);
+  const [{ totals, perActivity, heatmap, byWeekday }, game, mod] = await Promise.all([
+    getStats(user.id),
+    getGameState(user.id),
+    getModuleStats(user.id),
+  ]);
   const ranked = [...byWeekday].filter((d) => d.total > 0).sort((a, b) => b.rate - a.rate);
   const best = ranked[0];
   const worst = ranked[ranked.length - 1];
@@ -41,6 +55,35 @@ export default async function StatsPage() {
           </div>
         </div>
       </section>
+
+      {/* gym module — last 7 days */}
+      {mod.hasGym && (
+        <section>
+          <h2 className="text-sm font-black uppercase tracking-widest text-lime mb-3">🏋️ Gym · last 7 days</h2>
+          <div className="grid grid-cols-3 gap-3">
+            <Stat value={`${mod.gym.days}/7`} label="days trained" accent />
+            <Stat value={mod.gym.avgIntensity ? `${mod.gym.avgIntensity}/5` : "—"} label="avg intensity" />
+            <Stat value={mod.gym.sets} label="sets logged" />
+            <Stat value={`${mod.gym.volume}`} label="volume (kg)" />
+            <Stat value={mod.gym.latestWeight != null ? `${mod.gym.latestWeight}kg` : "—"} label="bodyweight" />
+            <Stat value={mod.gym.weightChange != null ? `${mod.gym.weightChange > 0 ? "+" : ""}${mod.gym.weightChange}kg` : "—"} label="7-day change" />
+          </div>
+        </section>
+      )}
+
+      {/* food module — last 7 days */}
+      {mod.hasFood && (
+        <section>
+          <h2 className="text-sm font-black uppercase tracking-widest text-lime mb-3">🍽 Food · 7-day average</h2>
+          <div className="grid grid-cols-3 gap-3">
+            <Stat value={`${mod.food.avgProtein}g`} label="protein / day" accent />
+            <Stat value={`${mod.food.avgCarbs}g`} label="carbs / day" />
+            <Stat value={`${mod.food.avgWaterL}L`} label="water / day" />
+            <Stat value={mod.food.avgKcal} label="kcal / day" />
+            <Stat value={`${mod.food.proteinHitDays}/${mod.food.daysLogged || 0}`} label="protein goal days" />
+          </div>
+        </section>
+      )}
 
       {/* weekday insight */}
       {best && (
