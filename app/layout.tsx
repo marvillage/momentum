@@ -12,7 +12,9 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     title: "Momentum",
-    statusBarStyle: "black-translucent",
+    // "default" = iOS keeps content below the status bar / Dynamic Island
+    // (no drawing under the notch), so the header is always visible.
+    statusBarStyle: "default",
   },
 };
 
@@ -20,7 +22,6 @@ export const viewport: Viewport = {
   themeColor: "#0b0b0c",
   width: "device-width",
   initialScale: 1,
-  viewportFit: "cover", // use the full iPhone screen incl. notch area
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
