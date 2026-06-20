@@ -2,14 +2,16 @@ import { prisma } from "@/lib/db";
 import { GymClient } from "@/components/GymClient";
 import { todayStr, dowOf } from "@/lib/date";
 import { DOW } from "@/lib/constants";
+import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function GymPage() {
+  const user = await requireUser();
   const today = dowOf(todayStr());
   const [exercises, weights] = await Promise.all([
-    prisma.gymExercise.findMany({ orderBy: [{ dow: "asc" }, { order: "asc" }] }),
-    prisma.bodyWeight.findMany({ orderBy: { date: "asc" }, take: 60 }),
+    prisma.gymExercise.findMany({ where: { userId: user.id }, orderBy: [{ dow: "asc" }, { order: "asc" }] }),
+    prisma.bodyWeight.findMany({ where: { userId: user.id }, orderBy: { date: "asc" }, take: 60 }),
   ]);
   const todayLabel = DOW.find((d) => d.n === today)?.label ?? "";
 

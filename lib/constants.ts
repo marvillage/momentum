@@ -1,5 +1,5 @@
-export const AREAS = ["DSA", "ML", "CAREER", "GATE", "WRITING", "X", "MATIKS", "GYM", "HABIT"] as const;
-export const CADENCES = ["DAILY", "WEEKDAYS", "WEEKLY", "DAYS"] as const;
+export const AREAS = ["DSA", "ML", "CAREER", "WRITING", "X", "MATIKS", "GYM", "SKIN", "HABIT"] as const;
+export const CADENCES = ["DAILY", "WEEKDAYS", "WEEKLY", "DAYS", "EVERY_N"] as const;
 
 export const DOW = [
   { n: 1, label: "Mon" },

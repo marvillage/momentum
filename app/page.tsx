@@ -1,30 +1,19 @@
 import { ensureToday, getDashboard } from "@/lib/planner";
-import { TaskRow } from "@/components/TaskRow";
+import { TaskBoard } from "@/components/TaskBoard";
+import { RankBadge } from "@/components/RankBadge";
+import { CleanSweep } from "@/components/CleanSweep";
+import { getGameState } from "@/lib/game";
+import { requireUser } from "@/lib/auth";
 import { todayStr, niceDate } from "@/lib/date";
 
 export const dynamic = "force-dynamic";
 
-function serialize(t: Awaited<ReturnType<typeof getDashboard>>["todays"][number]) {
-  return {
-    id: t.id,
-    status: t.status,
-    count: t.count,
-    date: t.date,
-    carriedFrom: t.carriedFrom,
-    activity: {
-      name: t.activity.name,
-      area: t.activity.area,
-      targetCount: t.activity.targetCount,
-      minCount: t.activity.minCount,
-    },
-    item: t.item ? { title: t.item.title, url: t.item.url } : null,
-  };
-}
-
 export default async function Home() {
-  await ensureToday();
-  const { todays, backlog } = await getDashboard();
+  const user = await requireUser();
+  await ensureToday(user.id);
+  const [{ todays, backlog }, game] = await Promise.all([getDashboard(user.id), getGameState(user.id)]);
   const doneCount = todays.filter((t) => t.status === "DONE").length;
+  const cleanSweep = todays.length > 0 && doneCount === todays.length;
 
   return (
     <div className="space-y-8">
@@ -36,29 +25,10 @@ export default async function Home() {
         </p>
       </section>
 
-      {backlog.length > 0 && (
-        <section>
-          <h2 className="text-hot text-sm font-black uppercase tracking-widest mb-3">
-            Backlog · {backlog.length}
-          </h2>
-          <div className="rounded-2xl border border-line overflow-hidden divide-y divide-line bg-surface">
-            {backlog.map((t) => (
-              <TaskRow key={t.id} task={serialize(t)} overdue />
-            ))}
-          </div>
-        </section>
-      )}
+      <RankBadge game={game} />
+      <CleanSweep active={cleanSweep} />
 
-      <section>
-        <div className="rounded-2xl border border-line overflow-hidden divide-y divide-line bg-surface">
-          {todays.length === 0 && (
-            <div className="p-6 text-muted text-sm">Nothing scheduled yet. Add activities in Manage.</div>
-          )}
-          {todays.map((t) => (
-            <TaskRow key={t.id} task={serialize(t)} />
-          ))}
-        </div>
-      </section>
+      <TaskBoard todays={todays} backlog={backlog} />
     </div>
   );
 }

@@ -29,8 +29,8 @@ function shell(heading: string, sub: string, bodyRows: string, footer: string): 
   </div>`;
 }
 
-export async function morning() {
-  const { todays } = await getDashboard();
+export async function morning(userId: string) {
+  const { todays } = await getDashboard(userId);
   const pending = todays.filter((t) => t.status !== "DONE");
   const body = pending.length ? pending.map(row).join("") : `<tr><td style="color:${C.muted}">Nothing scheduled. Rest up.</td></tr>`;
   return {
@@ -39,8 +39,8 @@ export async function morning() {
   };
 }
 
-export async function evening() {
-  const { todays, backlog } = await getDashboard();
+export async function evening(userId: string) {
+  const { todays, backlog } = await getDashboard(userId);
   const pending = todays.filter((t) => t.status !== "DONE");
   const done = todays.length - pending.length;
   const body = pending.length

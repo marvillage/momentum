@@ -6,8 +6,8 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   const userId = await apiUserId();
   if (!userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const { id } = await params;
-  const item = await prisma.item.findUnique({ where: { id }, include: { activity: true } });
-  if (!item || item.activity.userId !== userId) return NextResponse.json({ error: "not found" }, { status: 404 });
-  await prisma.item.delete({ where: { id } });
+  const log = await prisma.foodLog.findUnique({ where: { id } });
+  if (!log || log.userId !== userId) return NextResponse.json({ error: "not found" }, { status: 404 });
+  await prisma.foodLog.delete({ where: { id } });
   return NextResponse.json({ ok: true });
 }

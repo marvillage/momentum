@@ -5,12 +5,18 @@ import { useRouter } from "next/navigation";
 import { AREAS, CADENCES, DOW } from "@/lib/constants";
 
 type Item = { id: string; title: string; url: string | null; done: boolean; order: number };
+type GroupOpt = { id: string; name: string; icon: string | null };
 type Activity = {
   id: string;
   name: string;
   area: string;
+  type: string;
+  icon: string | null;
+  groupId: string | null;
   cadence: string;
   daysOfWeek: string | null;
+  everyNDays: number | null;
+  durationMin: number | null;
   targetCount: number;
   minCount: number | null;
   unit: string | null;
@@ -22,7 +28,7 @@ const fieldCls =
   "bg-surface2 border border-line rounded-lg px-3 py-2 text-sm text-ink focus:border-lime outline-none";
 const labelCls = "text-[11px] font-black uppercase tracking-widest text-muted";
 
-export function ActivityEditor({ activity }: { activity: Activity }) {
+export function ActivityEditor({ activity, groups }: { activity: Activity; groups: GroupOpt[] }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [a, setA] = useState(activity);
@@ -81,12 +87,31 @@ export function ActivityEditor({ activity }: { activity: Activity }) {
 
         <div className="grid grid-cols-2 gap-4">
           <label className="flex flex-col gap-1.5">
+            <span className={labelCls}>Group</span>
+            <select className={fieldCls} value={a.groupId ?? ""} onChange={(e) => patch({ groupId: e.target.value || null })}>
+              <option value="">No group</option>
+              {groups.map((g) => (
+                <option key={g.id} value={g.id}>{g.icon ? `${g.icon} ` : ""}{g.name}</option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className={labelCls}>Icon</span>
+            <input className={fieldCls} maxLength={2} placeholder="🎯" defaultValue={a.icon ?? ""}
+              onBlur={(e) => e.target.value !== (a.icon ?? "") && patch({ icon: e.target.value.trim() || null })} />
+          </label>
+          <label className="flex flex-col gap-1.5">
             <span className={labelCls}>Area</span>
             <select className={fieldCls} value={a.area} onChange={(e) => patch({ area: e.target.value })}>
               {AREAS.map((x) => (
                 <option key={x}>{x}</option>
               ))}
             </select>
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className={labelCls}>Duration (min)</span>
+            <input type="number" min={0} className={fieldCls} placeholder="—" defaultValue={a.durationMin ?? ""}
+              onBlur={(e) => patch({ durationMin: e.target.value ? parseInt(e.target.value, 10) : null })} />
           </label>
           <label className="flex flex-col gap-1.5">
             <span className={labelCls}>Cadence</span>
@@ -118,6 +143,15 @@ export function ActivityEditor({ activity }: { activity: Activity }) {
             />
           </label>
         </div>
+
+        {a.cadence === "EVERY_N" && (
+          <label className="flex items-center gap-2 text-sm">
+            <span className={labelCls}>Every</span>
+            <input type="number" min={1} className={`${fieldCls} w-20`} defaultValue={a.everyNDays ?? 2}
+              onBlur={(e) => patch({ everyNDays: Math.max(1, parseInt(e.target.value || "2", 10)) })} />
+            <span className="text-muted">days</span>
+          </label>
+        )}
 
         {a.cadence === "DAYS" && (
           <div className="flex flex-col gap-1.5">

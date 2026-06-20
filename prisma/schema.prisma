@@ -1,6 +1,7 @@
 // Momentum — personal daily operator
-// Local dev uses SQLite. For Vercel, switch provider to "postgresql"
-// and point DATABASE_URL at a free Neon database, then run `prisma db push`.
+// Multi-user: every top-level row is owned by a User. Existing data is migrated
+// to the seeded "kush" account. userId is nullable only to allow a clean
+// migration over pre-existing rows; application code always sets it.
 
 generator client {
   provider = "prisma-client-js"
@@ -11,14 +12,56 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id           String         @id @default(cuid())
+  username     String         @unique
+  passwordHash String
+  name         String?
+  timezone     String         @default("Asia/Kolkata")
+  onboarded    Boolean        @default(false)
+  createdAt    DateTime       @default(now())
+  groups       Group[]
+  activities   Activity[]
+  tasks        TaskInstance[]
+  gymExercises GymExercise[]
+  bodyWeights  BodyWeight[]
+  channels     Channel[]
+  foodLogs     FoodLog[]
+  settings     Settings?
+}
+
+// A navbar section / customizable grouping of activities ("Coding", "Gym", "Writing").
+model Group {
+  id         String     @id @default(cuid())
+  userId     String?
+  user       User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  slug       String
+  icon       String? // emoji shown in the navbar
+  kind       String     @default("NORMAL") // NORMAL | GYM | FOOD
+  sortOrder  Int        @default(0)
+  activities Activity[]
+  createdAt  DateTime   @default(now())
+
+  @@unique([userId, slug])
+}
+
 // A recurring thing you do: "LeetCode 4/day", "Striver course", "Gym", "Medium 3/week".
 model Activity {
   id           String         @id @default(cuid())
-  slug         String         @unique
-  area         String // DSA | ML | CAREER | GYM | WRITING | X | MATIKS | HABIT
+  userId       String?
+  user         User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slug         String
+  area         String // DSA | ML | CAREER | WRITING | X | MATIKS | GYM | SKIN | HABIT
+  type         String         @default("SIMPLE") // SIMPLE | PROBLEMS | VIDEO | GYM | WEEKLY
   name         String
-  cadence      String         @default("DAILY") // DAILY | WEEKDAYS | WEEKLY | DAYS
+  icon         String?
+  groupId      String?
+  group        Group?         @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  cadence      String         @default("DAILY") // DAILY | WEEKDAYS | WEEKLY | DAYS | EVERY_N
   daysOfWeek   String? // CSV of 1..7 (Mon..Sun) when cadence = DAYS
+  everyNDays   Int? // when cadence = EVERY_N
+  durationMin  Int? // optional time box per occurrence, in minutes
   targetCount  Int            @default(1)
   minCount     Int? // e.g. LeetCode min 3
   weeklyTarget Int? // e.g. Medium 3/week
@@ -29,6 +72,9 @@ model Activity {
   items        Item[]
   tasks        TaskInstance[]
   createdAt    DateTime       @default(now())
+
+  @@unique([userId, slug])
+  @@index([groupId])
 }
 
 // Ordered catalog content fed into an Activity: a Striver problem, an ML video, an LLD pattern.
@@ -50,6 +96,8 @@ model Item {
 // One generated occurrence for a date — the heart of the planner + backlog.
 model TaskInstance {
   id          String    @id @default(cuid())
+  userId      String?
+  user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
   activityId  String
   activity    Activity  @relation(fields: [activityId], references: [id], onDelete: Cascade)
   itemId      String?
@@ -63,6 +111,7 @@ model TaskInstance {
   sets        GymSet[]
   createdAt   DateTime  @default(now())
 
+  @@index([userId, date])
   @@index([date])
   @@index([activityId, date])
 }
@@ -81,6 +130,8 @@ model GymSet {
 // Your prescribed split: which exercises (with target weight) on which weekday.
 model GymExercise {
   id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   dow       Int // 1 = Mon ... 7 = Sun
   name      String
   sets      Int      @default(3)
@@ -89,18 +140,24 @@ model GymExercise {
   order     Int      @default(0)
   createdAt DateTime @default(now())
 
-  @@index([dow])
+  @@index([userId, dow])
 }
 
 model BodyWeight {
   id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   date      String
   kg        Float
   createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model Channel {
   id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   kind      String // TELEGRAM | EMAIL | WEBPUSH
   target    String // chat id | email | subscription JSON
   enabled   Boolean  @default(true)
@@ -108,8 +165,27 @@ model Channel {
 }
 
 model Settings {
-  id          Int    @id @default(1)
-  timezone    String @default("Asia/Kolkata")
-  morningPush String @default("07:30")
-  eveningPush String @default("21:00")
+  id            String @id @default(cuid())
+  userId        String @unique
+  user          User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  timezone      String @default("Asia/Kolkata")
+  morningPush   String @default("07:30")
+  eveningPush   String @default("21:00")
+  kcalTarget    Int    @default(2200)
+  proteinTarget Int    @default(140)
+}
+
+// A manually-logged food entry. You type the food + its kcal & protein.
+model FoodLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      String // YYYY-MM-DD in app timezone
+  bucket    String // BREAKFAST | LUNCH | SNACK | DINNER
+  name      String
+  kcal      Int      @default(0)
+  protein   Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([userId, date])
 }

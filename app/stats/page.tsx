@@ -1,10 +1,14 @@
 import { getStats } from "@/lib/stats";
+import { getGameState } from "@/lib/game";
 import { Heatmap } from "@/components/Heatmap";
+import { RankBadge } from "@/components/RankBadge";
+import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function StatsPage() {
-  const { totals, perActivity, heatmap } = await getStats();
+  const user = await requireUser();
+  const [{ totals, perActivity, heatmap }, game] = await Promise.all([getStats(user.id), getGameState(user.id)]);
   const activeStreaks = perActivity.filter((a) => a.active);
 
   return (
@@ -13,6 +17,8 @@ export default async function StatsPage() {
         <p className="text-lime text-xs font-black uppercase tracking-[0.2em] mb-2">The truth</p>
         <h1 className="text-5xl font-black uppercase tracking-tight">Stats</h1>
       </div>
+
+      <RankBadge game={game} />
 
       <div className="grid grid-cols-2 gap-4">
         <div className="rounded-2xl border border-line bg-surface p-5">

@@ -1,17 +1,17 @@
 import { prisma } from "./db";
-import { todayStr, dowOf, weekStartStr } from "./date";
+import { todayStr, dowOf, weekStartStr, daysBetween } from "./date";
 
 /**
  * Make sure today's task instances exist for every active activity.
  * Idempotent — safe to call on every page load and from cron.
  */
-export async function ensureToday(): Promise<void> {
+export async function ensureToday(userId: string): Promise<void> {
   const today = todayStr();
   const dow = dowOf(today);
   const weekStart = weekStartStr(today);
 
   const activities = await prisma.activity.findMany({
-    where: { active: true },
+    where: { active: true, userId },
     include: { items: { orderBy: { order: "asc" } } },
   });
 
@@ -23,6 +23,10 @@ export async function ensureToday(): Promise<void> {
     else if (a.cadence === "DAYS" && a.daysOfWeek) {
       const set = a.daysOfWeek.split(",").map((s) => parseInt(s.trim(), 10));
       dateFor = set.includes(dow) ? today : null;
+    } else if (a.cadence === "EVERY_N" && a.everyNDays && a.everyNDays > 0) {
+      const anchor = a.createdAt.toISOString().slice(0, 10);
+      const diff = daysBetween(anchor, today);
+      dateFor = diff >= 0 && diff % a.everyNDays === 0 ? today : null;
     }
     if (!dateFor) continue;
 
@@ -44,32 +48,55 @@ export async function ensureToday(): Promise<void> {
     }
 
     await prisma.taskInstance.create({
-      data: { activityId: a.id, date: dateFor, itemId },
+      data: { activityId: a.id, date: dateFor, itemId, userId },
     });
   }
 }
 
-export async function getDashboard() {
+export async function getDashboard(userId: string, opts: { groupId?: string } = {}) {
   const today = todayStr();
   const weekStart = weekStartStr(today);
+  const actFilter = opts.groupId ? { groupId: opts.groupId } : {};
 
-  const todays = await prisma.taskInstance.findMany({
+  const todaysRaw = await prisma.taskInstance.findMany({
     where: {
-      OR: [{ date: today }, { date: weekStart, activity: { cadence: "WEEKLY" } }],
+      userId,
+      AND: [
+        { OR: [{ date: today }, { date: weekStart, activity: { cadence: "WEEKLY" } }] },
+        { activity: actFilter },
+      ],
     },
     include: { activity: true, item: true },
     orderBy: [{ activity: { sortOrder: "asc" } }],
   });
 
-  const backlog = await prisma.taskInstance.findMany({
+  // For content activities (problems/video), surface the next N un-done queue
+  // items so the day shows exactly what to do, each tappable & checkable.
+  const todays = await Promise.all(
+    todaysRaw.map(async (t) => {
+      const wantsBatch = (t.activity.type === "PROBLEMS" || t.activity.type === "VIDEO") && t.status !== "DONE";
+      if (!wantsBatch) return { ...t, batch: [] as { id: string; title: string; url: string | null }[] };
+      const items = await prisma.item.findMany({
+        where: { activityId: t.activityId, done: false },
+        orderBy: { order: "asc" },
+        take: Math.max(1, t.activity.targetCount),
+        select: { id: true, title: true, url: true },
+      });
+      return { ...t, batch: items };
+    })
+  );
+
+  const backlogRaw = await prisma.taskInstance.findMany({
     where: {
+      userId,
       status: "PENDING",
       date: { lt: today },
-      activity: { cadence: { not: "WEEKLY" } },
+      activity: { cadence: { not: "WEEKLY" }, ...actFilter },
     },
     include: { activity: true, item: true },
     orderBy: [{ date: "asc" }],
   });
+  const backlog = backlogRaw.map((t) => ({ ...t, batch: [] as { id: string; title: string; url: string | null }[] }));
 
   return { today, weekStart, todays, backlog };
 }

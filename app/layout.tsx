@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import { Nav } from "@/components/Nav";
@@ -8,6 +8,19 @@ const geist = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Momentum — Daily Operator",
   description: "Your personal daily manager",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "Momentum",
+    statusBarStyle: "black-translucent",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0b0b0c",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover", // use the full iPhone screen incl. notch area
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

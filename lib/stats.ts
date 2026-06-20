@@ -14,9 +14,9 @@ export type ActivityStat = {
 
 export type HeatCell = { date: string; total: number; done: number; ratio: number };
 
-export async function getStats() {
+export async function getStats(userId: string) {
   const today = todayStr();
-  const tasks = await prisma.taskInstance.findMany({ include: { activity: true } });
+  const tasks = await prisma.taskInstance.findMany({ where: { userId }, include: { activity: true } });
 
   // group dates+status per activity
   const byAct = new Map<string, { activity: (typeof tasks)[number]["activity"]; dates: Map<string, string> }>();
