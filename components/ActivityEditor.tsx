@@ -31,6 +31,40 @@ const fieldCls =
   "bg-surface2 border border-line rounded-lg px-3 py-2 text-sm text-ink focus:border-lime outline-none";
 const labelCls = "text-[11px] font-black uppercase tracking-widest text-muted";
 
+// Inline-editable queue item: edit title + url, toggle done, delete.
+function ItemRow({ item, onChange }: { item: Item; onChange: () => void }) {
+  const [open, setOpen] = useState(false);
+  const save = async (data: Record<string, unknown>) => {
+    await fetch(`/api/items/${item.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(data) });
+    onChange();
+  };
+  const del = async () => { await fetch(`/api/items/${item.id}`, { method: "DELETE" }); onChange(); };
+  return (
+    <div className="px-3 py-2 text-sm space-y-1.5">
+      <div className="flex items-center gap-2">
+        <span className="text-muted text-xs w-6 shrink-0">{item.order + 1}</span>
+        <input
+          defaultValue={item.title}
+          onBlur={(e) => e.target.value.trim() && e.target.value.trim() !== item.title && save({ title: e.target.value.trim() })}
+          className={`flex-1 bg-transparent outline-none focus:text-lime ${item.done ? "line-through text-muted" : ""}`}
+        />
+        {item.url && <a href={item.url} target="_blank" rel="noreferrer" className="text-lime text-xs shrink-0">▶</a>}
+        <button onClick={() => setOpen((o) => !o)} title="Edit link" className="text-muted hover:text-ink text-xs shrink-0">✎</button>
+        <button onClick={() => save({ done: !item.done })} title="Toggle done" className={`text-xs shrink-0 ${item.done ? "text-lime" : "text-muted hover:text-ink"}`}>✓</button>
+        <button onClick={del} className="text-hot text-xs shrink-0 px-1">✕</button>
+      </div>
+      {open && (
+        <input
+          defaultValue={item.url ?? ""}
+          placeholder="https://…"
+          onBlur={(e) => save({ url: e.target.value.trim() || null })}
+          className="w-full bg-surface2 border border-line rounded px-2 py-1 text-xs outline-none focus:border-lime"
+        />
+      )}
+    </div>
+  );
+}
+
 export function ActivityEditor({ activity, groups }: { activity: Activity; groups: GroupOpt[] }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -96,12 +130,6 @@ export function ActivityEditor({ activity, groups }: { activity: Activity; group
       router.refresh();
     });
 
-  const delItem = (id: string) =>
-    start(async () => {
-      await fetch(`/api/items/${id}`, { method: "DELETE" });
-      router.refresh();
-    });
-
   // Read the queue from the live prop (refreshed after upload/import/delete)
   // so newly added items appear without a full page reload.
   const items = activity.items;
@@ -114,6 +142,11 @@ export function ActivityEditor({ activity, groups }: { activity: Activity; group
         <h2 className="text-sm font-black uppercase tracking-widest text-lime">Schedule</h2>
 
         <div className="grid grid-cols-2 gap-4">
+          <label className="flex flex-col gap-1.5 col-span-2">
+            <span className={labelCls}>Name</span>
+            <input className={fieldCls} defaultValue={a.name}
+              onBlur={(e) => e.target.value.trim() && e.target.value.trim() !== a.name && patch({ name: e.target.value.trim() })} />
+          </label>
           <label className="flex flex-col gap-1.5">
             <span className={labelCls}>Group</span>
             <select className={fieldCls} value={a.groupId ?? ""} onChange={(e) => patch({ groupId: e.target.value || null })}>
@@ -301,18 +334,7 @@ export function ActivityEditor({ activity, groups }: { activity: Activity; group
         {items.length > 0 && (
           <div className="rounded-xl border border-line divide-y divide-line max-h-80 overflow-y-auto">
             {items.map((it) => (
-              <div key={it.id} className="flex items-center gap-2 px-3 py-2 text-sm">
-                <span className="text-muted text-xs w-6 shrink-0">{it.order + 1}</span>
-                <span className={`flex-1 truncate ${it.done ? "line-through text-muted" : ""}`}>{it.title}</span>
-                {it.url && (
-                  <a href={it.url} target="_blank" rel="noreferrer" className="text-lime text-xs shrink-0">
-                    ▶
-                  </a>
-                )}
-                <button onClick={() => delItem(it.id)} className="text-hot text-xs shrink-0 px-1">
-                  ✕
-                </button>
-              </div>
+              <ItemRow key={it.id} item={it} onChange={() => router.refresh()} />
             ))}
           </div>
         )}

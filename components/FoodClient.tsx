@@ -11,6 +11,41 @@ type Totals = { kcal: number; protein: number; carbs: number; waterMl: number };
 
 const field = "bg-surface2 border border-line rounded-lg px-3 py-2 text-sm text-ink focus:border-lime outline-none";
 
+function LogRow({ log, onChange }: { log: Log; onChange: () => void }) {
+  const [edit, setEdit] = useState(false);
+  const [f, setF] = useState({ name: log.name, protein: String(log.protein), carbs: String(log.carbs), kcal: String(log.kcal) });
+  const save = async () => {
+    await fetch(`/api/food/${log.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(f) });
+    setEdit(false); onChange();
+  };
+  const del = async () => { await fetch(`/api/food/${log.id}`, { method: "DELETE" }); onChange(); };
+
+  if (edit) {
+    return (
+      <div className="px-4 py-3 space-y-2">
+        <input className={`${field} w-full`} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+        <div className="flex items-center gap-2">
+          <input className={`${field} w-20`} type="number" value={f.protein} onChange={(e) => setF({ ...f, protein: e.target.value })} title="protein" />
+          <input className={`${field} w-20`} type="number" value={f.carbs} onChange={(e) => setF({ ...f, carbs: e.target.value })} title="carbs" />
+          <input className={`${field} w-20`} type="number" value={f.kcal} onChange={(e) => setF({ ...f, kcal: e.target.value })} title="kcal" />
+          <button onClick={save} className="bg-lime text-ground font-black uppercase text-[11px] px-3 py-2 rounded-lg ml-auto">Save</button>
+          <button onClick={() => setEdit(false)} className="text-muted text-xs">cancel</button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center gap-3 px-4 py-3">
+      <div className="min-w-0 flex-1">
+        <div className="font-bold truncate">{log.name}</div>
+        <div className="text-muted text-[11px] font-semibold uppercase">{log.protein}g protein · {log.carbs}g carbs · {log.kcal} kcal</div>
+      </div>
+      <button onClick={() => setEdit(true)} className="text-muted hover:text-ink text-sm px-1 shrink-0">✎</button>
+      <button onClick={del} className="text-hot text-sm px-1 shrink-0">✕</button>
+    </div>
+  );
+}
+
 function Bar({ label, value, target, unit, hot }: { label: string; value: number; target: number; unit: string; hot?: boolean }) {
   const pct = target > 0 ? Math.min(100, Math.round((100 * value) / target)) : 0;
   return (
@@ -68,7 +103,6 @@ export function FoodClient({
     refresh();
   });
 
-  const delLog = (id: string) => start(async () => { await fetch(`/api/food/${id}`, { method: "DELETE" }); refresh(); });
   const delSaved = (id: string) => start(async () => { await fetch(`/api/food/saved/${id}`, { method: "DELETE" }); refresh(); });
 
   const water = (ml: number) => start(async () => {
@@ -177,13 +211,7 @@ export function FoodClient({
               <h3 className="text-xs font-black uppercase tracking-widest text-muted mb-2">{b.label}</h3>
               <div className="rounded-2xl border border-line bg-surface divide-y divide-line overflow-hidden">
                 {rows.map((l) => (
-                  <div key={l.id} className="flex items-center gap-3 px-4 py-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="font-bold truncate">{l.name}</div>
-                      <div className="text-muted text-[11px] font-semibold uppercase">{l.protein}g protein · {l.carbs}g carbs · {l.kcal} kcal</div>
-                    </div>
-                    <button onClick={() => delLog(l.id)} className="text-hot text-sm px-1 shrink-0">✕</button>
-                  </div>
+                  <LogRow key={l.id} log={l} onChange={refresh} />
                 ))}
               </div>
             </div>

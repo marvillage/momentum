@@ -106,6 +106,15 @@ export function GymClient({
   const avgLabel = avgIntensity ? INTENSITY[Math.round(avgIntensity)]?.label : "";
   const trend = [...ratings].reverse(); // oldest → newest
 
+  const [editEx, setEditEx] = useState<string | null>(null);
+  const [exForm, setExForm] = useState({ name: "", sets: 3, reps: 8 });
+  const startEdit = (e: Ex) => { setEditEx(e.id); setExForm({ name: e.name, sets: e.sets, reps: e.reps }); };
+  const saveEx = (id: string) =>
+    start(async () => {
+      await fetch(`/api/gym/exercises/${id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(exForm) });
+      setEditEx(null); refresh();
+    });
+
   const logSet = (exercise: string, reps: number, weight: number) =>
     start(async () => {
       await fetch("/api/gym/sets", {
@@ -262,25 +271,28 @@ export function GymClient({
           {dayEx.map((e) => (
             <div key={e.id} className="bg-surface2 border border-line rounded-xl px-3 py-2.5 space-y-2">
               <div className="flex items-center gap-2">
-                <div className="min-w-0 flex-1">
-                  <div className="font-bold truncate">{e.name}</div>
-                  <div className="text-muted text-[11px] font-semibold uppercase">
-                    {e.sets} × {e.reps}
-                  </div>
-                </div>
-                <button onClick={() => bumpWeight(e, -2.5)} className="size-7 rounded-md bg-ground border border-line font-black">
-                  −
-                </button>
-                <span className="font-black tabular-nums w-16 text-center">
-                  {e.weight}
-                  <span className="text-muted text-xs"> kg</span>
-                </span>
-                <button onClick={() => bumpWeight(e, 2.5)} className="size-7 rounded-md bg-ground border border-line font-black">
-                  +
-                </button>
-                <button onClick={() => delEx(e.id)} className="text-hot text-sm px-1">
-                  ✕
-                </button>
+                {editEx === e.id ? (
+                  <>
+                    <input className={`${fieldCls} flex-1 min-w-[90px]`} value={exForm.name} onChange={(ev) => setExForm({ ...exForm, name: ev.target.value })} />
+                    <input className={`${fieldCls} w-12`} type="number" value={exForm.sets} onChange={(ev) => setExForm({ ...exForm, sets: +ev.target.value })} title="sets" />
+                    <span className="text-muted text-xs">×</span>
+                    <input className={`${fieldCls} w-12`} type="number" value={exForm.reps} onChange={(ev) => setExForm({ ...exForm, reps: +ev.target.value })} title="reps" />
+                    <button onClick={() => saveEx(e.id)} className="bg-lime text-ground font-black uppercase text-[11px] px-2.5 py-1.5 rounded-md">save</button>
+                    <button onClick={() => setEditEx(null)} className="text-muted text-xs px-1">✕</button>
+                  </>
+                ) : (
+                  <>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-bold truncate">{e.name}</div>
+                      <div className="text-muted text-[11px] font-semibold uppercase">{e.sets} × {e.reps}</div>
+                    </div>
+                    <button onClick={() => bumpWeight(e, -2.5)} className="size-7 rounded-md bg-ground border border-line font-black">−</button>
+                    <span className="font-black tabular-nums w-16 text-center">{e.weight}<span className="text-muted text-xs"> kg</span></span>
+                    <button onClick={() => bumpWeight(e, 2.5)} className="size-7 rounded-md bg-ground border border-line font-black">+</button>
+                    <button onClick={() => startEdit(e)} className="text-muted hover:text-ink text-sm px-1">✎</button>
+                    <button onClick={() => delEx(e.id)} className="text-hot text-sm px-1">✕</button>
+                  </>
+                )}
               </div>
               {day === today && (
                 <ExerciseLogger
