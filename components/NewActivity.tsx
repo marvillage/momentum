@@ -10,6 +10,7 @@ type TrackOpt = { key: string; name: string; blurb: string; type: string; count:
 const TYPES = [
   { key: "PROBLEMS", label: "Coding / problems", hint: "Auto-load a problem track with links (Blind 75, NeetCode 150…)" },
   { key: "VIDEO", label: "Video course", hint: "A playlist/course — track the next video each day" },
+  { key: "ARTICLE", label: "Article / publishing", hint: "Publish on set days — weekly and/or every other week" },
   { key: "GYM", label: "Gym", hint: "A workout — configure the split & weights in the Gym tab" },
   { key: "WEEKLY", label: "Weekly goal", hint: "A target per week (e.g. 3 Medium stories)" },
   { key: "SIMPLE", label: "Simple habit", hint: "A daily checkbox or counter" },
@@ -41,6 +42,7 @@ export function NewActivity({
   const [area, setArea] = useState("HABIT");
   const [cadence, setCadence] = useState("DAILY");
   const [days, setDays] = useState<Set<number>>(new Set([1, 2, 3, 4, 5]));
+  const [biweekly, setBiweekly] = useState<Set<number>>(new Set());
   const [everyNDays, setEveryNDays] = useState(2);
   const [durationMin, setDurationMin] = useState("");
   const [target, setTarget] = useState(1);
@@ -54,13 +56,14 @@ export function NewActivity({
 
   const reset = () => {
     setType("SIMPLE"); setName(""); setIcon(""); setLink(""); setGroupId(""); setArea("HABIT");
-    setCadence("DAILY"); setDays(new Set([1, 2, 3, 4, 5])); setEveryNDays(2);
+    setCadence("DAILY"); setDays(new Set([1, 2, 3, 4, 5])); setBiweekly(new Set()); setEveryNDays(2);
     setDurationMin(""); setTarget(1); setMinCount(""); setUnit(""); setTrack("");
   };
 
   const pickType = (t: string) => {
     setType(t);
     if (t === "WEEKLY") setCadence("WEEKLY");
+    else if (t === "ARTICLE") { setCadence("DAYS"); setDays(new Set()); setUnit("article"); setTarget(1); }
     else if (cadence === "WEEKLY") setCadence("DAILY");
     if (t === "PROBLEMS") { setTarget(4); setUnit("questions"); }
     if (t === "VIDEO") { setTarget(1); setUnit("video"); }
@@ -70,6 +73,12 @@ export function NewActivity({
     const s = new Set(days);
     if (s.has(n)) s.delete(n); else s.add(n);
     setDays(s);
+  };
+
+  const toggleBiweekly = (n: number) => {
+    const s = new Set(biweekly);
+    if (s.has(n)) s.delete(n); else s.add(n);
+    setBiweekly(s);
   };
 
   const create = () =>
@@ -86,6 +95,7 @@ export function NewActivity({
           groupId: groupId || null,
           cadence,
           daysOfWeek: cadence === "DAYS" ? [...days].sort((a, b) => a - b).join(",") : null,
+          biweeklyDays: biweekly.size ? [...biweekly].sort((a, b) => a - b).join(",") : null,
           everyNDays: cadence === "EVERY_N" ? everyNDays : null,
           durationMin: durationMin ? parseInt(durationMin, 10) : null,
           targetCount: Math.max(1, target),
@@ -168,8 +178,37 @@ export function NewActivity({
         </label>
       </div>
 
+      {/* article publishing schedule */}
+      {type === "ARTICLE" && (
+        <div className="grid gap-3">
+          <div className="grid gap-1.5">
+            <span className={lbl}>Publish weekly on</span>
+            <div className="flex gap-1.5 flex-wrap">
+              {DOW.map((d) => (
+                <button key={d.n} onClick={() => toggleDay(d.n)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase border ${days.has(d.n) ? "bg-lime text-ground border-lime" : "border-line text-muted hover:border-muted"}`}>
+                  {d.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="grid gap-1.5">
+            <span className={lbl}>…plus every OTHER week on</span>
+            <div className="flex gap-1.5 flex-wrap">
+              {DOW.map((d) => (
+                <button key={d.n} onClick={() => toggleBiweekly(d.n)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase border ${biweekly.has(d.n) ? "bg-lime text-ground border-lime" : "border-line text-muted hover:border-muted"}`}>
+                  {d.label}
+                </button>
+              ))}
+            </div>
+            <span className="text-muted text-[11px]">Leave empty if you don&apos;t publish biweekly.</span>
+          </div>
+        </div>
+      )}
+
       {/* frequency */}
-      {type !== "WEEKLY" && (
+      {type !== "WEEKLY" && type !== "ARTICLE" && (
         <div className="grid gap-2">
           <span className={lbl}>Frequency</span>
           <div className="flex flex-wrap gap-1.5">

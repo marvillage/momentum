@@ -1,6 +1,13 @@
 import { prisma } from "./db";
 import { todayStr, dowOf, weekStartStr, daysBetween } from "./date";
 
+// Whether `dateStr` falls in an "on" biweekly week (even week index from a
+// fixed reference Monday, 2024-01-01). Used for every-other-week publishing.
+function isBiweeklyWeek(dateStr: string): boolean {
+  const idx = Math.floor(daysBetween(weekStartStr("2024-01-01"), weekStartStr(dateStr)) / 7);
+  return idx % 2 === 0;
+}
+
 /**
  * Make sure today's task instances exist for every active activity.
  * Idempotent — safe to call on every page load and from cron.
@@ -28,6 +35,13 @@ export async function ensureToday(userId: string): Promise<void> {
       const diff = daysBetween(anchor, today);
       dateFor = diff >= 0 && diff % a.everyNDays === 0 ? today : null;
     }
+
+    // Biweekly publishing days fire every other week, on top of any cadence.
+    if (!dateFor && a.biweeklyDays) {
+      const set = a.biweeklyDays.split(",").map((s) => parseInt(s.trim(), 10));
+      if (set.includes(dow) && isBiweeklyWeek(today)) dateFor = today;
+    }
+
     if (!dateFor) continue;
 
     const existing = await prisma.taskInstance.findFirst({

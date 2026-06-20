@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { apiUserId } from "@/lib/auth";
 
 const EDITABLE = [
-  "name", "area", "type", "icon", "link", "groupId", "cadence", "daysOfWeek", "everyNDays",
+  "name", "area", "type", "icon", "link", "groupId", "cadence", "daysOfWeek", "biweeklyDays", "everyNDays",
   "durationMin", "targetCount", "minCount", "weeklyTarget", "unit", "active", "rollover", "sortOrder",
 ];
 

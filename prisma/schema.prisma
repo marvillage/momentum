@@ -133,7 +133,8 @@ model Activity {
   groupId      String?
   group        Group?         @relation(fields: [groupId], references: [id], onDelete: SetNull)
   cadence      String         @default("DAILY") // DAILY | WEEKDAYS | WEEKLY | DAYS | EVERY_N
-  daysOfWeek   String? // CSV of 1..7 (Mon..Sun) when cadence = DAYS
+  daysOfWeek   String? // CSV of 1..7 (Mon..Sun) — weekly days when cadence = DAYS
+  biweeklyDays String? // CSV of 1..7 — days that fire every OTHER week (publishing)
   everyNDays   Int? // when cadence = EVERY_N
   durationMin  Int? // optional time box per occurrence, in minutes
   targetCount  Int            @default(1)

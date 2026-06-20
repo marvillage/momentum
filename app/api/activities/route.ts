@@ -37,6 +37,7 @@ export async function POST(req: Request) {
       groupId: body.groupId ?? null,
       cadence: body.cadence || "DAILY",
       daysOfWeek: body.daysOfWeek ?? null,
+      biweeklyDays: body.biweeklyDays ?? null,
       everyNDays: body.everyNDays ?? null,
       durationMin: body.durationMin ?? null,
       targetCount: body.targetCount ?? 1,

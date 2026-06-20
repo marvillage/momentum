@@ -36,6 +36,7 @@ export default async function ActivityDetail({ params }: { params: Promise<{ id:
           groupId: a.groupId,
           cadence: a.cadence,
           daysOfWeek: a.daysOfWeek,
+          biweeklyDays: a.biweeklyDays,
           everyNDays: a.everyNDays,
           durationMin: a.durationMin,
           targetCount: a.targetCount,

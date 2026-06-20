@@ -16,6 +16,7 @@ type Activity = {
   groupId: string | null;
   cadence: string;
   daysOfWeek: string | null;
+  biweeklyDays: string | null;
   everyNDays: number | null;
   durationMin: number | null;
   targetCount: number;
@@ -53,6 +54,7 @@ export function ActivityEditor({ activity, groups }: { activity: Activity; group
     });
 
   const days = new Set((a.daysOfWeek || "").split(",").filter(Boolean).map(Number));
+  const bdays = new Set((a.biweeklyDays || "").split(",").filter(Boolean).map(Number));
 
   const patch = (data: Partial<Activity>) => {
     const next = { ...a, ...data };
@@ -72,6 +74,13 @@ export function ActivityEditor({ activity, groups }: { activity: Activity; group
     if (s.has(n)) s.delete(n);
     else s.add(n);
     patch({ daysOfWeek: [...s].sort((x, y) => x - y).join(",") });
+  };
+
+  const toggleBiweeklyDay = (n: number) => {
+    const s = new Set(bdays);
+    if (s.has(n)) s.delete(n);
+    else s.add(n);
+    patch({ biweeklyDays: s.size ? [...s].sort((x, y) => x - y).join(",") : null });
   };
 
   const upload = () =>
@@ -175,20 +184,38 @@ export function ActivityEditor({ activity, groups }: { activity: Activity; group
         )}
 
         {a.cadence === "DAYS" && (
-          <div className="flex flex-col gap-1.5">
-            <span className={labelCls}>On which days</span>
-            <div className="flex gap-1.5 flex-wrap">
-              {DOW.map((d) => (
-                <button
-                  key={d.n}
-                  onClick={() => toggleDay(d.n)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase border ${
-                    days.has(d.n) ? "bg-lime text-ground border-lime" : "border-line text-muted hover:border-muted"
-                  }`}
-                >
-                  {d.label}
-                </button>
-              ))}
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1.5">
+              <span className={labelCls}>Weekly on</span>
+              <div className="flex gap-1.5 flex-wrap">
+                {DOW.map((d) => (
+                  <button
+                    key={d.n}
+                    onClick={() => toggleDay(d.n)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase border ${
+                      days.has(d.n) ? "bg-lime text-ground border-lime" : "border-line text-muted hover:border-muted"
+                    }`}
+                  >
+                    {d.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <span className={labelCls}>…plus every other week on</span>
+              <div className="flex gap-1.5 flex-wrap">
+                {DOW.map((d) => (
+                  <button
+                    key={d.n}
+                    onClick={() => toggleBiweeklyDay(d.n)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase border ${
+                      bdays.has(d.n) ? "bg-lime text-ground border-lime" : "border-line text-muted hover:border-muted"
+                    }`}
+                  >
+                    {d.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         )}
