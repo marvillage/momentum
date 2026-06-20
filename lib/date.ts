@@ -6,6 +6,14 @@ export function todayStr(tz: string = TZ): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(new Date());
 }
 
+/** Current hour (0–23) in the app timezone. */
+export function localHour(tz: string = TZ): number {
+  return parseInt(
+    new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", hour12: false }).format(new Date()),
+    10
+  );
+}
+
 /** Weekday for a YYYY-MM-DD string: 1 = Mon ... 7 = Sun. */
 export function dowOf(dateStr: string): number {
   const js = new Date(dateStr + "T12:00:00Z").getUTCDay(); // 0 = Sun

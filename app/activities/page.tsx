@@ -55,7 +55,7 @@ export default async function Activities() {
               items={b.items.map((a) => ({
                 id: a.id, name: a.name, icon: a.icon, type: a.type, cadence: a.cadence,
                 everyNDays: a.everyNDays, targetCount: a.targetCount, minCount: a.minCount,
-                durationMin: a.durationMin, itemCount: a._count.items, active: a.active, sortOrder: a.sortOrder,
+                durationMin: a.durationMin, itemCount: a._count.items, active: a.active, rollover: a.rollover, sortOrder: a.sortOrder,
               }))}
             />
           </div>

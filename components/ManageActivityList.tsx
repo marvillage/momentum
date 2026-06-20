@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 type A = {
   id: string; name: string; icon: string | null; type: string; cadence: string;
   everyNDays: number | null; targetCount: number; minCount: number | null;
-  durationMin: number | null; itemCount: number; active: boolean; sortOrder: number;
+  durationMin: number | null; itemCount: number; active: boolean; rollover: boolean; sortOrder: number;
 };
 
 export function ManageActivityList({ items }: { items: A[] }) {
@@ -26,6 +26,16 @@ export function ManageActivityList({ items }: { items: A[] }) {
       router.refresh();
     });
   };
+
+  const toggleBacklog = (a: A) =>
+    start(async () => {
+      await fetch(`/api/activities/${a.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ rollover: !a.rollover }),
+      });
+      router.refresh();
+    });
 
   return (
     <div className="rounded-2xl border border-line divide-y divide-line overflow-hidden bg-surface">
@@ -49,6 +59,13 @@ export function ManageActivityList({ items }: { items: A[] }) {
               {a.active ? "on" : "off"}
             </span>
           </Link>
+          <button
+            onClick={() => toggleBacklog(a)}
+            title={a.rollover ? "Unfinished days roll to backlog" : "Unfinished days just lapse"}
+            className={`shrink-0 text-[10px] font-black uppercase px-2 py-1 rounded border ${a.rollover ? "border-lime/40 text-lime" : "border-line text-muted"}`}
+          >
+            {a.rollover ? "↻ backlog" : "no backlog"}
+          </button>
         </div>
       ))}
     </div>

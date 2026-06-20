@@ -3,9 +3,10 @@ import { TaskBoard } from "@/components/TaskBoard";
 import { RankBadge } from "@/components/RankBadge";
 import { CleanSweep } from "@/components/CleanSweep";
 import { RankUp } from "@/components/RankUp";
+import { EndOfDayReview } from "@/components/EndOfDayReview";
 import { getGameState } from "@/lib/game";
 import { requireUser } from "@/lib/auth";
-import { todayStr, niceDate } from "@/lib/date";
+import { todayStr, niceDate, localHour } from "@/lib/date";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,10 @@ export default async function Home() {
   const [{ todays, backlog }, game] = await Promise.all([getDashboard(user.id), getGameState(user.id)]);
   const doneCount = todays.filter((t) => t.status === "DONE").length;
   const cleanSweep = todays.length > 0 && doneCount === todays.length;
+  const evening = localHour() >= 19;
+  const pending = todays
+    .filter((t) => t.status === "PENDING")
+    .map((t) => ({ id: t.id, title: t.item?.title || t.activity.name, icon: t.activity.icon, area: t.activity.area }));
 
   return (
     <div className="space-y-8">
@@ -29,6 +34,7 @@ export default async function Home() {
       <RankBadge game={game} />
       <RankUp active={game.rankedUp} rank={game.rankLabel} />
       <CleanSweep active={cleanSweep} />
+      <EndOfDayReview pending={pending} evening={evening} />
 
       <TaskBoard todays={todays} backlog={backlog} />
     </div>
