@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { deleteAccount } from "@/app/actions/auth";
+import { deleteAccount, resetStats } from "@/app/actions/auth";
 
 const field = "bg-surface2 border border-line rounded-lg px-3 py-2 text-sm text-ink focus:border-lime outline-none";
 const lbl = "text-[11px] font-black uppercase tracking-widest text-muted";
@@ -39,6 +39,11 @@ export function ProfileClient({
     else setPwMsg(j.error || "Failed");
     setTimeout(() => setPwMsg(""), 3000);
   });
+
+  const reset = () => {
+    if (!confirm("Reset XP, level, rank, and streak to zero? Your tasks and history stay — only the score restarts.")) return;
+    start(async () => { await resetStats(); });
+  };
 
   const del = () => {
     if (!confirm("Delete your account and ALL your data? This cannot be undone.")) return;
@@ -82,6 +87,13 @@ export function ProfileClient({
           <button onClick={changePw} disabled={!cur || !nxt} className={saveBtn}>Update password</button>
           {pwMsg && <span className="text-xs text-muted font-bold">{pwMsg}</span>}
         </div>
+      </div>
+
+      {/* reset progress */}
+      <div className={card}>
+        <h2 className="text-sm font-black uppercase tracking-widest text-lime">Reset progress</h2>
+        <p className="text-muted text-sm">Restart your XP, level, rank, and streak from zero. Your activities, tasks, and history are kept — only the score resets.</p>
+        <button onClick={reset} className="bg-surface2 border border-line font-black uppercase text-xs px-4 py-2.5 rounded-lg hover:border-lime">↺ Reset XP & rank</button>
       </div>
 
       {/* danger */}

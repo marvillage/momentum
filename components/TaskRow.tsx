@@ -23,6 +23,7 @@ type Task = {
   };
   item: { title: string; url: string | null } | null;
   batch?: BatchItem[];
+  gym?: { name: string; sets: number; reps: number; weight: number }[];
 };
 
 export function TaskRow({ task, overdue = false }: { task: Task; overdue?: boolean }) {
@@ -35,6 +36,7 @@ export function TaskRow({ task, overdue = false }: { task: Task; overdue?: boole
   const target = task.activity.targetCount ?? 1;
   const counted = target > 1;
   const batch = task.batch ?? [];
+  const gym = task.gym ?? [];
   const isContent = task.activity.type === "PROBLEMS" || task.activity.type === "VIDEO";
   // With a content batch, the row header is the activity; otherwise the single item.
   const title = batch.length ? task.activity.name : task.item?.title || task.activity.name;
@@ -156,6 +158,23 @@ export function TaskRow({ task, overdue = false }: { task: Task; overdue?: boole
 
       {isContent && batch.length === 0 && !done && (
         <div className="mt-1.5 ml-10 text-muted text-[11px]">Queue empty — add content in Manage.</div>
+      )}
+
+      {/* gym: today's saved exercises for this weekday */}
+      {gym.length > 0 && (
+        <div className="mt-2.5 ml-10 space-y-1.5">
+          {gym.map((e, i) => (
+            <div key={i} className="flex items-center gap-2.5 text-sm">
+              <span className="flex-1 truncate">{e.name}</span>
+              <span className="text-muted text-[11px] font-semibold uppercase shrink-0">
+                {e.sets}×{e.reps} · {e.weight}kg
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+      {task.activity.type === "GYM" && gym.length === 0 && (
+        <div className="mt-1.5 ml-10 text-muted text-[11px]">Rest day — or add today&apos;s exercises in the Gym tab.</div>
       )}
     </div>
   );

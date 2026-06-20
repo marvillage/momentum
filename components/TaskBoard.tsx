@@ -24,6 +24,7 @@ function serialize(t: Task) {
     },
     item: t.item ? { title: t.item.title, url: t.item.url } : null,
     batch: t.batch ?? [],
+    gym: t.gym ?? [],
   };
 }
 

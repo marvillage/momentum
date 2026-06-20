@@ -1,5 +1,6 @@
 import { prisma } from "./db";
 import { todayStr, addDays, dowOf } from "./date";
+import { countsAsDone } from "./game";
 
 export type ActivityStat = {
   id: string;
@@ -26,7 +27,7 @@ export async function getStats(userId: string) {
       g = { activity: t.activity, dates: new Map() };
       byAct.set(t.activityId, g);
     }
-    g.dates.set(t.date, t.status);
+    g.dates.set(t.date, countsAsDone(t.status, t.completedAt, t.date) ? "DONE" : "MISS");
   }
 
   const perActivity: ActivityStat[] = [...byAct.values()]
@@ -90,7 +91,7 @@ export async function getStats(userId: string) {
   for (const t of tasks) {
     const c = dateCounts.get(t.date) || { t: 0, d: 0 };
     c.t++;
-    if (t.status === "DONE") c.d++;
+    if (countsAsDone(t.status, t.completedAt, t.date)) c.d++;
     dateCounts.set(t.date, c);
   }
   const heatmap: HeatCell[] = [];
@@ -106,7 +107,7 @@ export async function getStats(userId: string) {
   for (const t of tasks) {
     const wd = dowOf(t.date);
     dowAgg[wd].t++;
-    if (t.status === "DONE") dowAgg[wd].d++;
+    if (countsAsDone(t.status, t.completedAt, t.date)) dowAgg[wd].d++;
   }
   const LABELS = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const byWeekday = [1, 2, 3, 4, 5, 6, 7].map((n) => ({

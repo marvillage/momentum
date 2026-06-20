@@ -22,6 +22,12 @@ export function tierFor(pct: number): Tier {
   return TIERS.find((t) => pct >= t.min)!;
 }
 
+// A completion only counts if it happened ON its scheduled day. A backlog/late
+// completion records nothing — the day stays "not done" everywhere in stats.
+export function countsAsDone(status: string, completedAt: Date | null, date: string): boolean {
+  return status === "DONE" && (!completedAt || toDateStr(completedAt) === date);
+}
+
 /** The next tier up + how many % points to reach it (null at Radiant). */
 export function nextTier(pct: number): { tier: Tier; toGo: number } | null {
   const idx = TIERS.findIndex((t) => pct >= t.min);
@@ -31,19 +37,26 @@ export function nextTier(pct: number): { tier: Tier; toGo: number } | null {
 }
 
 export async function getGameState(userId: string) {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { lastRank: true, statsResetAt: true } });
+  const resetDate = user?.statsResetAt ? toDateStr(user.statsResetAt) : null;
+
   const today = todayStr();
-  const from30 = addDays(today, -29);
+  // Window starts at the later of 30 days ago and the last stats reset.
+  const win90 = addDays(today, -89);
+  const lowerBound = resetDate && resetDate > win90 ? resetDate : win90;
+  const from30Raw = addDays(today, -29);
+  const from30 = resetDate && resetDate > from30Raw ? resetDate : from30Raw;
 
   const tasks = await prisma.taskInstance.findMany({
-    where: { userId, date: { gte: addDays(today, -89) } },
-    select: { date: true, status: true },
+    where: { userId, date: { gte: lowerBound } },
+    select: { date: true, status: true, completedAt: true },
   });
 
   const byDay = new Map<string, { t: number; d: number }>();
   for (const t of tasks) {
     const c = byDay.get(t.date) || { t: 0, d: 0 };
     c.t++;
-    if (t.status === "DONE") c.d++;
+    if (countsAsDone(t.status, t.completedAt, t.date)) c.d++;
     byDay.set(t.date, c);
   }
 
@@ -74,6 +87,7 @@ export async function getGameState(userId: string) {
   let grace = 1;
   let cursor = (byDay.get(today)?.d ?? 0) >= 1 ? today : addDays(today, -1);
   for (let i = 0; i < 120; i++) {
+    if (resetDate && cursor < resetDate) break; // don't count days before a reset
     const c = byDay.get(cursor);
     if (!c || c.t === 0) {
       cursor = addDays(cursor, -1);
@@ -89,14 +103,14 @@ export async function getGameState(userId: string) {
   }
   const freezeLeft = grace;
 
-  // XP only counts tasks finished ON their scheduled day — clearing a backlog
-  // (late) task still marks it done but earns no XP.
+  // Only on-time completions (on/after any reset) count toward XP, level, and
+  // badges. Backlog/late completions record nothing.
   const doneTasks = await prisma.taskInstance.findMany({
-    where: { userId, status: "DONE" },
+    where: { userId, status: "DONE", ...(user?.statsResetAt ? { completedAt: { gte: user.statsResetAt } } : {}) },
     select: { date: true, completedAt: true },
   });
-  const totalDone = doneTasks.length;
   const onTimeDone = doneTasks.filter((t) => !t.completedAt || toDateStr(t.completedAt) === t.date).length;
+  const totalDone = onTimeDone;
   const xp = onTimeDone * 10;
   const level = Math.floor(Math.sqrt(xp / 50)) + 1;
   const xpThisLevel = 50 * (level - 1) * (level - 1);
@@ -127,11 +141,10 @@ export async function getGameState(userId: string) {
   ];
 
   // Rank-up detection: compare to the last rank we recorded for this user.
-  const u = await prisma.user.findUnique({ where: { id: userId }, select: { lastRank: true } });
   const idx = TIERS.findIndex((t) => t.label === tier.label);
-  const prevIdx = u?.lastRank ? TIERS.findIndex((t) => t.label === u.lastRank) : -1;
+  const prevIdx = user?.lastRank ? TIERS.findIndex((t) => t.label === user.lastRank) : -1;
   const rankedUp = !calibrating && prevIdx >= 0 && idx < prevIdx; // lower index = higher tier
-  if (!calibrating && u && u.lastRank !== tier.label) {
+  if (!calibrating && user && user.lastRank !== tier.label) {
     await prisma.user.update({ where: { id: userId }, data: { lastRank: tier.label } });
   }
 

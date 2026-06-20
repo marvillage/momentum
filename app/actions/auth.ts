@@ -61,6 +61,14 @@ export async function completeOnboarding() {
   redirect("/");
 }
 
+export async function resetStats() {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  // Baseline everything from now: XP, rank, streak start fresh.
+  await prisma.user.update({ where: { id: user.id }, data: { statsResetAt: new Date(), lastRank: null } });
+  redirect("/stats");
+}
+
 export async function deleteAccount() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");

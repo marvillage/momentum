@@ -20,6 +20,7 @@ model User {
   timezone     String         @default("Asia/Kolkata")
   onboarded    Boolean        @default(false)
   lastRank     String? // last rank label seen, for rank-up celebration
+  statsResetAt DateTime? // XP/rank/streak only count activity on/after this
   createdAt    DateTime       @default(now())
   groups       Group[]
   activities   Activity[]

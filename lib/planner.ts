@@ -84,19 +84,31 @@ export async function getDashboard(userId: string, opts: { groupId?: string } = 
     orderBy: [{ activity: { sortOrder: "asc" } }],
   });
 
-  // For content activities (problems/video), surface the next N un-done queue
-  // items so the day shows exactly what to do, each tappable & checkable.
+  // Enrich each task: content activities get their next N queue items; gym
+  // tasks get that weekday's saved exercises, shown inline on Today.
+  type Gym = { name: string; sets: number; reps: number; weight: number };
+  const emptyBatch: { id: string; title: string; url: string | null }[] = [];
+  const dow = dowOf(today);
   const todays = await Promise.all(
     todaysRaw.map(async (t) => {
+      let gym: Gym[] = [];
+      if (t.activity.type === "GYM") {
+        gym = await prisma.gymExercise.findMany({
+          where: { userId, dow },
+          orderBy: { order: "asc" },
+          select: { name: true, sets: true, reps: true, weight: true },
+        });
+      }
       const wantsBatch = (t.activity.type === "PROBLEMS" || t.activity.type === "VIDEO") && t.status !== "DONE";
-      if (!wantsBatch) return { ...t, batch: [] as { id: string; title: string; url: string | null }[] };
-      const items = await prisma.item.findMany({
-        where: { activityId: t.activityId, done: false },
-        orderBy: { order: "asc" },
-        take: Math.max(1, t.activity.targetCount),
-        select: { id: true, title: true, url: true },
-      });
-      return { ...t, batch: items };
+      const batch = wantsBatch
+        ? await prisma.item.findMany({
+            where: { activityId: t.activityId, done: false },
+            orderBy: { order: "asc" },
+            take: Math.max(1, t.activity.targetCount),
+            select: { id: true, title: true, url: true },
+          })
+        : emptyBatch;
+      return { ...t, batch, gym };
     })
   );
 
@@ -110,7 +122,11 @@ export async function getDashboard(userId: string, opts: { groupId?: string } = 
     include: { activity: true, item: true },
     orderBy: [{ date: "asc" }],
   });
-  const backlog = backlogRaw.map((t) => ({ ...t, batch: [] as { id: string; title: string; url: string | null }[] }));
+  const backlog = backlogRaw.map((t) => ({
+    ...t,
+    batch: [] as { id: string; title: string; url: string | null }[],
+    gym: [] as { name: string; sets: number; reps: number; weight: number }[],
+  }));
 
   return { today, weekStart, todays, backlog };
 }
