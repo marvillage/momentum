@@ -68,10 +68,12 @@ export async function getGameState(userId: string) {
   const up = nextTier(pct);
 
   // Overall streak: consecutive days you completed ≥1 task. Days with nothing
-  // scheduled are skipped (a rest day doesn't break the chain).
+  // scheduled are skipped (rest days don't break the chain). One missed day is
+  // forgiven by a built-in "freeze" so a single off-day won't reset you.
   let streak = 0;
+  let grace = 1;
   let cursor = (byDay.get(today)?.d ?? 0) >= 1 ? today : addDays(today, -1);
-  for (let i = 0; i < 90; i++) {
+  for (let i = 0; i < 120; i++) {
     const c = byDay.get(cursor);
     if (!c || c.t === 0) {
       cursor = addDays(cursor, -1);
@@ -80,8 +82,12 @@ export async function getGameState(userId: string) {
     if (c.d >= 1) {
       streak++;
       cursor = addDays(cursor, -1);
+    } else if (grace > 0) {
+      grace--; // freeze this missed day and keep going
+      cursor = addDays(cursor, -1);
     } else break;
   }
+  const freezeLeft = grace;
 
   const totalDone = await prisma.taskInstance.count({ where: { userId, status: "DONE" } });
   const xp = totalDone * 10;
@@ -89,17 +95,55 @@ export async function getGameState(userId: string) {
   const xpThisLevel = 50 * (level - 1) * (level - 1);
   const xpNextLevel = 50 * level * level;
 
+  // Weekly recap (last 7 days).
+  const weekFrom = addDays(today, -6);
+  let weekDone = 0;
+  let cleanSweeps = 0;
+  let activeDays = 0;
+  for (const [date, c] of byDay) {
+    if (date < weekFrom || date > today || c.t === 0) continue;
+    weekDone += c.d;
+    if (c.d >= 1) activeDays++;
+    if (c.d === c.t) cleanSweeps++;
+  }
+
+  // Achievements (earned from current standing).
+  const badges = [
+    { key: "first", label: "First Win", emoji: "✅", earned: totalDone >= 1 },
+    { key: "ten", label: "10 Done", emoji: "🔟", earned: totalDone >= 10 },
+    { key: "fifty", label: "50 Done", emoji: "🏅", earned: totalDone >= 50 },
+    { key: "century", label: "Century", emoji: "💯", earned: totalDone >= 100 },
+    { key: "streak7", label: "7-Day Streak", emoji: "🔥", earned: streak >= 7 },
+    { key: "streak30", label: "30-Day Streak", emoji: "🌟", earned: streak >= 30 },
+    { key: "silver", label: "Silver Rank", emoji: "🥈", earned: !calibrating && pct >= 50 },
+    { key: "gold", label: "Gold Rank", emoji: "🥇", earned: !calibrating && pct >= 80 },
+  ];
+
+  // Rank-up detection: compare to the last rank we recorded for this user.
+  const u = await prisma.user.findUnique({ where: { id: userId }, select: { lastRank: true } });
+  const idx = TIERS.findIndex((t) => t.label === tier.label);
+  const prevIdx = u?.lastRank ? TIERS.findIndex((t) => t.label === u.lastRank) : -1;
+  const rankedUp = !calibrating && prevIdx >= 0 && idx < prevIdx; // lower index = higher tier
+  if (!calibrating && u && u.lastRank !== tier.label) {
+    await prisma.user.update({ where: { id: userId }, data: { lastRank: tier.label } });
+  }
+
   return {
     pct,
     calibrating,
     tier,
     nextTier: up,
     streak,
+    freezeLeft,
     xp,
     level,
     levelProgress: Math.round((100 * (xp - xpThisLevel)) / Math.max(1, xpNextLevel - xpThisLevel)),
     totalDone,
     sched30: sched,
     done30: done,
+    weekly: { done: weekDone, cleanSweeps, activeDays },
+    badges,
+    rankedUp,
+    rankLabel: tier.label,
   };
 }

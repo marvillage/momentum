@@ -20,6 +20,42 @@ export default async function StatsPage() {
 
       <RankBadge game={game} />
 
+      {/* weekly recap */}
+      <section>
+        <h2 className="text-sm font-black uppercase tracking-widest text-lime mb-3">This week</h2>
+        <div className="grid grid-cols-3 gap-3">
+          <div className="rounded-2xl border border-line bg-surface p-4 text-center">
+            <div className="text-3xl font-black text-lime">{game.weekly.cleanSweeps}</div>
+            <div className="text-muted text-[10px] font-bold uppercase tracking-widest mt-1">clean sweeps</div>
+          </div>
+          <div className="rounded-2xl border border-line bg-surface p-4 text-center">
+            <div className="text-3xl font-black">{game.weekly.done}</div>
+            <div className="text-muted text-[10px] font-bold uppercase tracking-widest mt-1">tasks done</div>
+          </div>
+          <div className="rounded-2xl border border-line bg-surface p-4 text-center">
+            <div className="text-3xl font-black">{game.weekly.activeDays}<span className="text-muted text-lg">/7</span></div>
+            <div className="text-muted text-[10px] font-bold uppercase tracking-widest mt-1">active days</div>
+          </div>
+        </div>
+      </section>
+
+      {/* badges */}
+      <section>
+        <h2 className="text-sm font-black uppercase tracking-widest text-lime mb-3">Badges</h2>
+        <div className="grid grid-cols-4 gap-3">
+          {game.badges.map((b) => (
+            <div
+              key={b.key}
+              className={`rounded-2xl border p-3 text-center ${b.earned ? "border-lime/40 bg-lime/5" : "border-line bg-surface opacity-40"}`}
+              title={b.label}
+            >
+              <div className={`text-2xl ${b.earned ? "" : "grayscale"}`}>{b.emoji}</div>
+              <div className="text-[10px] font-bold uppercase tracking-wide mt-1 leading-tight">{b.label}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
       <div className="grid grid-cols-2 gap-4">
         <div className="rounded-2xl border border-line bg-surface p-5">
           <div className="text-5xl font-black text-lime">{totals.done}</div>

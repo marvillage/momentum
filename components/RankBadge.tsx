@@ -3,7 +3,7 @@ import type { getGameState } from "@/lib/game";
 type Game = Awaited<ReturnType<typeof getGameState>>;
 
 export function RankBadge({ game, compact = false }: { game: Game; compact?: boolean }) {
-  const { tier, pct, calibrating, nextTier, streak, level, xp, levelProgress } = game;
+  const { tier, pct, calibrating, nextTier, streak, level, xp, levelProgress, freezeLeft } = game;
 
   return (
     <div className="rounded-2xl border border-line bg-surface p-5">
@@ -31,7 +31,9 @@ export function RankBadge({ game, compact = false }: { game: Game; compact?: boo
         </div>
         <div className="text-right shrink-0">
           <div className="text-2xl font-black text-lime leading-none">{streak}🔥</div>
-          <div className="text-muted text-[10px] font-bold uppercase tracking-widest mt-1">day streak</div>
+          <div className="text-muted text-[10px] font-bold uppercase tracking-widest mt-1">
+            day streak{freezeLeft > 0 ? " · ❄️" : ""}
+          </div>
         </div>
       </div>
 

@@ -19,6 +19,7 @@ model User {
   name         String?
   timezone     String         @default("Asia/Kolkata")
   onboarded    Boolean        @default(false)
+  lastRank     String? // last rank label seen, for rank-up celebration
   createdAt    DateTime       @default(now())
   groups       Group[]
   activities   Activity[]

@@ -2,6 +2,7 @@ import { ensureToday, getDashboard } from "@/lib/planner";
 import { TaskBoard } from "@/components/TaskBoard";
 import { RankBadge } from "@/components/RankBadge";
 import { CleanSweep } from "@/components/CleanSweep";
+import { RankUp } from "@/components/RankUp";
 import { getGameState } from "@/lib/game";
 import { requireUser } from "@/lib/auth";
 import { todayStr, niceDate } from "@/lib/date";
@@ -26,6 +27,7 @@ export default async function Home() {
       </section>
 
       <RankBadge game={game} />
+      <RankUp active={game.rankedUp} rank={game.rankLabel} />
       <CleanSweep active={cleanSweep} />
 
       <TaskBoard todays={todays} backlog={backlog} />
