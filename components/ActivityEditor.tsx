@@ -36,6 +36,20 @@ export function ActivityEditor({ activity, groups }: { activity: Activity; group
   const [paste, setPaste] = useState("");
   const [mode, setMode] = useState<"append" | "replace">("append");
   const [msg, setMsg] = useState("");
+  const [yt, setYt] = useState("");
+
+  const importYt = () =>
+    start(async () => {
+      const res = await fetch("/api/items/youtube", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ activityId: a.id, playlist: yt, mode }),
+      });
+      const j = await res.json();
+      setMsg(res.ok ? `Imported ${j.added} videos.` : j.error || "Failed");
+      setYt("");
+      router.refresh();
+    });
 
   const days = new Set((a.daysOfWeek || "").split(",").filter(Boolean).map(Number));
 
@@ -224,6 +238,22 @@ export function ActivityEditor({ activity, groups }: { activity: Activity; group
             Upload
           </button>
           {msg && <span className="text-xs text-muted">{msg}</span>}
+        </div>
+
+        <div className="flex items-center gap-2 border-t border-line pt-4">
+          <input
+            className={`${fieldCls} flex-1`}
+            placeholder="Paste a YouTube playlist link to auto-import…"
+            value={yt}
+            onChange={(e) => setYt(e.target.value)}
+          />
+          <button
+            onClick={importYt}
+            disabled={!yt.trim()}
+            className="bg-lime text-ground font-black uppercase text-xs px-4 py-2.5 rounded-lg disabled:opacity-40 shrink-0"
+          >
+            Import ▶
+          </button>
         </div>
 
         {a.items.length > 0 && (
