@@ -6,6 +6,11 @@ export function todayStr(tz: string = TZ): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(new Date());
 }
 
+/** Format a Date as YYYY-MM-DD in the app timezone. */
+export function toDateStr(d: Date, tz: string = TZ): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(d);
+}
+
 /** Current hour (0–23) in the app timezone. */
 export function localHour(tz: string = TZ): number {
   return parseInt(

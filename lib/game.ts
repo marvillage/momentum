@@ -1,5 +1,5 @@
 import { prisma } from "./db";
-import { todayStr, addDays } from "./date";
+import { todayStr, addDays, toDateStr } from "./date";
 
 // Simple metal tiers, keyed by the credited 30-day score.
 export const TIERS = [
@@ -89,8 +89,15 @@ export async function getGameState(userId: string) {
   }
   const freezeLeft = grace;
 
-  const totalDone = await prisma.taskInstance.count({ where: { userId, status: "DONE" } });
-  const xp = totalDone * 10;
+  // XP only counts tasks finished ON their scheduled day — clearing a backlog
+  // (late) task still marks it done but earns no XP.
+  const doneTasks = await prisma.taskInstance.findMany({
+    where: { userId, status: "DONE" },
+    select: { date: true, completedAt: true },
+  });
+  const totalDone = doneTasks.length;
+  const onTimeDone = doneTasks.filter((t) => !t.completedAt || toDateStr(t.completedAt) === t.date).length;
+  const xp = onTimeDone * 10;
   const level = Math.floor(Math.sqrt(xp / 50)) + 1;
   const xpThisLevel = 50 * (level - 1) * (level - 1);
   const xpNextLevel = 50 * level * level;
