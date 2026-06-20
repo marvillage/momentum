@@ -6,8 +6,18 @@ import { DOW } from "@/lib/constants";
 
 type Ex = { id: string; dow: number; name: string; sets: number; reps: number; weight: number; order: number };
 type W = { date: string; kg: number };
+type R = { date: string; intensity: number };
 
 const fieldCls = "bg-surface2 border border-line rounded-lg px-2.5 py-2 text-sm text-ink focus:border-lime outline-none";
+
+// Beast scale — 1..5
+export const INTENSITY: Record<number, { label: string; emoji: string }> = {
+  5: { label: "Beast", emoji: "🔥" },
+  4: { label: "Strong", emoji: "💪" },
+  3: { label: "Solid", emoji: "👍" },
+  2: { label: "Light", emoji: "🙂" },
+  1: { label: "Barely", emoji: "😮‍💨" },
+};
 
 function Sparkline({ data }: { data: W[] }) {
   if (data.length < 2) return null;
@@ -25,7 +35,19 @@ function Sparkline({ data }: { data: W[] }) {
   );
 }
 
-export function GymClient({ today, exercises, weights }: { today: number; exercises: Ex[]; weights: W[] }) {
+export function GymClient({
+  today,
+  exercises,
+  weights,
+  todayRating,
+  ratings,
+}: {
+  today: number;
+  exercises: Ex[];
+  weights: W[];
+  todayRating: number | null;
+  ratings: R[];
+}) {
   const router = useRouter();
   const [, start] = useTransition();
   const [day, setDay] = useState(today);
@@ -33,6 +55,19 @@ export function GymClient({ today, exercises, weights }: { today: number; exerci
   const [form, setForm] = useState({ name: "", sets: 3, reps: 8, weight: 0 });
 
   const refresh = () => router.refresh();
+
+  const rate = (intensity: number) =>
+    start(async () => {
+      await fetch("/api/gym/intensity", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ intensity }),
+      });
+      refresh();
+    });
+
+  const avgIntensity = ratings.length ? ratings.reduce((s, r) => s + r.intensity, 0) / ratings.length : 0;
+  const avgLabel = avgIntensity ? INTENSITY[Math.round(avgIntensity)]?.label : "";
   const dayEx = exercises.filter((e) => e.dow === day).sort((a, b) => a.order - b.order);
   const latest = weights[weights.length - 1];
 
@@ -105,6 +140,39 @@ export function GymClient({ today, exercises, weights }: { today: number; exerci
             Log
           </button>
         </div>
+      </div>
+
+      {/* workout intensity */}
+      <div className="rounded-2xl border border-line bg-surface p-5 space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-black uppercase tracking-widest text-lime">Workout intensity</h2>
+          {avgIntensity > 0 && (
+            <span className="text-muted text-xs font-bold uppercase">
+              avg {avgIntensity.toFixed(1)} · {avgLabel}
+            </span>
+          )}
+        </div>
+        <p className="text-muted text-sm">How hard did you go today?</p>
+        <div className="flex gap-2">
+          {[1, 2, 3, 4, 5].map((n) => (
+            <button
+              key={n}
+              onClick={() => rate(n)}
+              className={`flex-1 rounded-xl border px-2 py-3 text-center transition-colors ${
+                todayRating === n ? "border-lime bg-lime/10" : "border-line hover:border-muted"
+              }`}
+            >
+              <div className="text-xl">{INTENSITY[n].emoji}</div>
+              <div className="text-[10px] font-black uppercase tracking-wide mt-1">{INTENSITY[n].label}</div>
+            </button>
+          ))}
+        </div>
+        {todayRating && (
+          <p className="text-xs font-bold text-lime">
+            Logged today: {INTENSITY[todayRating].emoji} {INTENSITY[todayRating].label} ({todayRating}/5)
+            {todayRating >= 5 ? " — excellent!" : todayRating >= 4 ? " — strong work" : todayRating >= 3 ? " — solid" : ""}
+          </p>
+        )}
       </div>
 
       {/* split editor */}

@@ -27,7 +27,21 @@ model User {
   bodyWeights  BodyWeight[]
   channels     Channel[]
   foodLogs     FoodLog[]
+  workouts     WorkoutRating[]
   settings     Settings?
+}
+
+// Post-workout intensity rating (1–5), one per day.
+model WorkoutRating {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      String // YYYY-MM-DD
+  intensity Int // 1..5
+  createdAt DateTime @default(now())
+
+  @@unique([userId, date])
+  @@index([userId])
 }
 
 // A navbar section / customizable grouping of activities ("Coding", "Gym", "Writing").

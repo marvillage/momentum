@@ -1,18 +1,24 @@
 import { prisma } from "./db";
 import { todayStr, addDays } from "./date";
 
-// Valorant-style tiers, keyed by last-30-day completion %.
+// Cosmic 7-stage tiers, keyed by the credited 30-day score.
 export const TIERS = [
-  { min: 100, label: "Radiant", emoji: "🔆", color: "#5eead4" },
-  { min: 96, label: "Immortal", emoji: "👑", color: "#ff4d6d" },
-  { min: 91, label: "Ascendant", emoji: "🌿", color: "#3ddc97" },
-  { min: 83, label: "Diamond", emoji: "💎", color: "#8ab4ff" },
-  { min: 73, label: "Platinum", emoji: "🛡️", color: "#3fd0c9" },
-  { min: 60, label: "Gold", emoji: "🥇", color: "#ffd23f" },
-  { min: 45, label: "Silver", emoji: "🥈", color: "#c8cdd6" },
-  { min: 30, label: "Bronze", emoji: "🥉", color: "#cd7f32" },
-  { min: 0, label: "Iron", emoji: "⛏️", color: "#9a9a92" },
+  { min: 96, label: "Supernova", emoji: "🌌", color: "#5eead4" },
+  { min: 88, label: "Quasar", emoji: "💫", color: "#c084fc" },
+  { min: 78, label: "Pulsar", emoji: "🌠", color: "#8ab4ff" },
+  { min: 66, label: "Nova", emoji: "🌟", color: "#3ddc97" },
+  { min: 52, label: "Comet", emoji: "☄️", color: "#ffd23f" },
+  { min: 35, label: "Star", emoji: "⭐", color: "#ffb454" },
+  { min: 0, label: "Spark", emoji: "✨", color: "#9a9a92" },
 ] as const;
+
+// A day's completion % is mapped generously: hit ~70% of the day and it counts
+// as a full day; 50% still banks 80%. Below that it scales down.
+export function dayCredit(rawPct: number): number {
+  if (rawPct >= 70) return 100;
+  if (rawPct >= 50) return 80 + ((rawPct - 50) / 20) * 20;
+  return rawPct * 1.6; // 0..50% -> 0..80
+}
 
 export type Tier = (typeof TIERS)[number];
 
@@ -38,21 +44,30 @@ export async function getGameState(userId: string) {
   });
 
   const byDay = new Map<string, { t: number; d: number }>();
-  let sched = 0;
-  let done = 0;
   for (const t of tasks) {
     const c = byDay.get(t.date) || { t: 0, d: 0 };
     c.t++;
     if (t.status === "DONE") c.d++;
     byDay.set(t.date, c);
-    if (t.date >= from30) {
-      sched++;
-      if (t.status === "DONE") done++;
-    }
   }
 
-  const pct = sched > 0 ? Math.round((100 * done) / sched) : 0;
-  const calibrating = sched < 10; // placement matches before a rank sticks
+  // Rank score = average of each day's *credited* completion over the last 30
+  // days (days with nothing scheduled are skipped). The credit curve makes
+  // ~70%-days count as full and 50%-days bank 80%.
+  let creditSum = 0;
+  let dayCount = 0;
+  let sched = 0;
+  let done = 0;
+  for (const [date, c] of byDay) {
+    if (date < from30 || c.t === 0) continue;
+    creditSum += dayCredit(Math.round((100 * c.d) / c.t));
+    dayCount++;
+    sched += c.t;
+    done += c.d;
+  }
+
+  const pct = dayCount > 0 ? Math.round(creditSum / dayCount) : 0;
+  const calibrating = dayCount < 5; // placement days before a rank sticks
   const tier = tierFor(pct);
   const up = nextTier(pct);
 
