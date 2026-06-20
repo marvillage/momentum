@@ -18,11 +18,11 @@ export default async function FoodPage() {
       </div>
 
       <FoodClient
-        logs={day.logs.map((l) => ({ id: l.id, bucket: l.bucket, name: l.name, kcal: l.kcal, protein: l.protein }))}
-        kcal={day.kcal}
-        protein={day.protein}
-        kcalTarget={day.kcalTarget}
-        proteinTarget={day.proteinTarget}
+        logs={day.logs.map((l) => ({ id: l.id, bucket: l.bucket, name: l.name, kcal: l.kcal, protein: l.protein, carbs: l.carbs }))}
+        totals={{ kcal: day.kcal, protein: day.protein, carbs: day.carbs, waterMl: day.waterMl }}
+        targets={{ kcal: day.kcalTarget, protein: day.proteinTarget, carbs: day.carbsTarget, waterMl: day.waterTargetMl }}
+        saved={day.saved.map((s) => ({ id: s.id, name: s.name, kcal: s.kcal, protein: s.protein, carbs: s.carbs }))}
+        history={day.history}
         buckets={BUCKETS.map((b) => ({ key: b.key, label: b.label }))}
         current={day.current}
         loggedBuckets={[...day.loggedBuckets]}

@@ -1,15 +1,11 @@
 import { prisma } from "./db";
 import { todayStr, addDays } from "./date";
 
-// Cosmic 7-stage tiers, keyed by the credited 30-day score.
+// Simple metal tiers, keyed by the credited 30-day score.
 export const TIERS = [
-  { min: 96, label: "Supernova", emoji: "🌌", color: "#5eead4" },
-  { min: 88, label: "Quasar", emoji: "💫", color: "#c084fc" },
-  { min: 78, label: "Pulsar", emoji: "🌠", color: "#8ab4ff" },
-  { min: 66, label: "Nova", emoji: "🌟", color: "#3ddc97" },
-  { min: 52, label: "Comet", emoji: "☄️", color: "#ffd23f" },
-  { min: 35, label: "Star", emoji: "⭐", color: "#ffb454" },
-  { min: 0, label: "Spark", emoji: "✨", color: "#9a9a92" },
+  { min: 80, label: "Gold", emoji: "🥇", color: "#ffd23f" },
+  { min: 50, label: "Silver", emoji: "🥈", color: "#c8cdd6" },
+  { min: 0, label: "Iron", emoji: "⛏️", color: "#9a9a92" },
 ] as const;
 
 // A day's completion % is mapped generously: hit ~70% of the day and it counts

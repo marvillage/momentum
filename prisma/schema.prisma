@@ -28,7 +28,36 @@ model User {
   channels     Channel[]
   foodLogs     FoodLog[]
   workouts     WorkoutRating[]
+  savedMeals   SavedMeal[]
+  waterLogs    WaterLog[]
   settings     Settings?
+}
+
+// A reusable meal the user has logged before — one-tap quick-add.
+model SavedMeal {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  kcal      Int      @default(0)
+  protein   Int      @default(0)
+  carbs     Int      @default(0)
+  uses      Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// Water intake events (each ~a glass); summed per day.
+model WaterLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      String
+  ml        Int
+  createdAt DateTime @default(now())
+
+  @@index([userId, date])
 }
 
 // Post-workout intensity rating (1–5), one per day.
@@ -187,6 +216,8 @@ model Settings {
   eveningPush   String @default("21:00")
   kcalTarget    Int    @default(2200)
   proteinTarget Int    @default(140)
+  carbsTarget   Int    @default(250)
+  waterTargetMl Int    @default(3000)
 }
 
 // A manually-logged food entry. You type the food + its kcal & protein.
@@ -199,6 +230,7 @@ model FoodLog {
   name      String
   kcal      Int      @default(0)
   protein   Int      @default(0)
+  carbs     Int      @default(0)
   createdAt DateTime @default(now())
 
   @@index([userId, date])

@@ -1,5 +1,5 @@
 import { prisma } from "./db";
-import { todayStr } from "./date";
+import { todayStr, addDays } from "./date";
 
 const TZ = process.env.APP_TZ || "Asia/Kolkata";
 
@@ -26,19 +26,50 @@ export function currentBucket(tz: string = TZ): Bucket {
 }
 
 export async function getFoodDay(userId: string, date: string = todayStr()) {
-  const [logs, settings] = await Promise.all([
+  const since = addDays(date, -6);
+  const [logs, settings, water, saved, weekLogs, weekWater] = await Promise.all([
     prisma.foodLog.findMany({ where: { userId, date }, orderBy: { createdAt: "asc" } }),
     prisma.settings.findUnique({ where: { userId } }),
+    prisma.waterLog.findMany({ where: { userId, date } }),
+    prisma.savedMeal.findMany({ where: { userId }, orderBy: [{ uses: "desc" }, { createdAt: "desc" }], take: 12 }),
+    prisma.foodLog.findMany({ where: { userId, date: { gte: since, lte: date } }, select: { date: true, kcal: true, protein: true } }),
+    prisma.waterLog.findMany({ where: { userId, date: { gte: since, lte: date } }, select: { date: true, ml: true } }),
   ]);
+
   const kcal = logs.reduce((s, l) => s + l.kcal, 0);
   const protein = logs.reduce((s, l) => s + l.protein, 0);
+  const carbs = logs.reduce((s, l) => s + l.carbs, 0);
+  const waterMl = water.reduce((s, w) => s + w.ml, 0);
+
+  // 7-day history (oldest → today).
+  const byDay = new Map<string, { kcal: number; protein: number; water: number }>();
+  for (const l of weekLogs) {
+    const c = byDay.get(l.date) || { kcal: 0, protein: 0, water: 0 };
+    c.kcal += l.kcal; c.protein += l.protein; byDay.set(l.date, c);
+  }
+  for (const w of weekWater) {
+    const c = byDay.get(w.date) || { kcal: 0, protein: 0, water: 0 };
+    c.water += w.ml; byDay.set(w.date, c);
+  }
+  const history: { date: string; kcal: number; protein: number; water: number }[] = [];
+  for (let d = since; d <= date; d = addDays(d, 1)) {
+    const c = byDay.get(d) || { kcal: 0, protein: 0, water: 0 };
+    history.push({ date: d, ...c });
+  }
+
   return {
     date,
     logs,
     kcal,
     protein,
+    carbs,
+    waterMl,
+    saved,
+    history,
     kcalTarget: settings?.kcalTarget ?? 2200,
     proteinTarget: settings?.proteinTarget ?? 140,
+    carbsTarget: settings?.carbsTarget ?? 250,
+    waterTargetMl: settings?.waterTargetMl ?? 3000,
     loggedBuckets: new Set(logs.map((l) => l.bucket)),
     current: currentBucket(),
   };

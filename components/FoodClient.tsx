@@ -3,43 +3,40 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
-type Log = { id: string; bucket: string; name: string; kcal: number; protein: number };
+type Log = { id: string; bucket: string; name: string; kcal: number; protein: number; carbs: number };
 type Bucket = { key: string; label: string };
+type Saved = { id: string; name: string; kcal: number; protein: number; carbs: number };
+type Hist = { date: string; kcal: number; protein: number; water: number };
+type Totals = { kcal: number; protein: number; carbs: number; waterMl: number };
 
 const field = "bg-surface2 border border-line rounded-lg px-3 py-2 text-sm text-ink focus:border-lime outline-none";
 
 function Bar({ label, value, target, unit, hot }: { label: string; value: number; target: number; unit: string; hot?: boolean }) {
   const pct = target > 0 ? Math.min(100, Math.round((100 * value) / target)) : 0;
   return (
-    <div className="rounded-2xl border border-line bg-surface p-5">
+    <div className="rounded-2xl border border-line bg-surface p-4">
       <div className="flex items-baseline justify-between">
-        <span className="text-muted text-xs font-bold uppercase tracking-widest">{label}</span>
-        <span className="text-sm font-bold text-muted">
-          <span className={`text-2xl font-black ${value >= target ? "text-lime" : "text-ink"}`}>{value}</span> / {target} {unit}
+        <span className="text-muted text-[11px] font-bold uppercase tracking-widest">{label}</span>
+        <span className="text-xs font-bold text-muted">
+          <span className={`text-xl font-black ${value >= target && target > 0 ? "text-lime" : "text-ink"}`}>{value}</span>/{target}
         </span>
       </div>
-      <div className="mt-3 h-2 rounded-full bg-surface2 overflow-hidden">
+      <div className="mt-2 h-2 rounded-full bg-surface2 overflow-hidden">
         <div className={`h-full rounded-full ${hot ? "bg-hot" : "bg-lime"}`} style={{ width: `${pct}%` }} />
       </div>
+      <div className="text-muted text-[10px] uppercase mt-1">{unit}</div>
     </div>
   );
 }
 
 export function FoodClient({
-  logs,
-  kcal,
-  protein,
-  kcalTarget,
-  proteinTarget,
-  buckets,
-  current,
-  loggedBuckets,
+  logs, totals, targets, saved, history, buckets, current, loggedBuckets,
 }: {
   logs: Log[];
-  kcal: number;
-  protein: number;
-  kcalTarget: number;
-  proteinTarget: number;
+  totals: Totals;
+  targets: Totals;
+  saved: Saved[];
+  history: Hist[];
   buckets: Bucket[];
   current: string;
   loggedBuckets: string[];
@@ -50,71 +47,105 @@ export function FoodClient({
   const [name, setName] = useState("");
   const [kc, setKc] = useState("");
   const [pr, setPr] = useState("");
+  const [cb, setCb] = useState("");
+  const [saveIt, setSaveIt] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [kt, setKt] = useState(String(kcalTarget));
-  const [pt, setPt] = useState(String(proteinTarget));
+  const [t, setT] = useState({ kcal: String(targets.kcal), protein: String(targets.protein), carbs: String(targets.carbs), water: String(targets.waterMl) });
 
   const refresh = () => router.refresh();
   const curLabel = buckets.find((b) => b.key === current)?.label ?? "a meal";
   const promptOpen = !loggedBuckets.includes(current);
 
-  const add = () =>
-    start(async () => {
-      await fetch("/api/food", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ bucket, name, kcal: kc, protein: pr }),
-      });
-      setName(""); setKc(""); setPr(""); refresh();
-    });
+  const post = (body: object) => fetch("/api/food", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
 
-  const del = (id: string) =>
-    start(async () => {
-      await fetch(`/api/food/${id}`, { method: "DELETE" });
-      refresh();
-    });
+  const add = () => start(async () => {
+    await post({ bucket, name, kcal: kc, protein: pr, carbs: cb, save: saveIt });
+    setName(""); setKc(""); setPr(""); setCb(""); setSaveIt(false); refresh();
+  });
 
-  const saveTargets = () =>
-    start(async () => {
-      await fetch("/api/food/targets", {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ kcalTarget: kt, proteinTarget: pt }),
-      });
-      setEditing(false); refresh();
-    });
+  const quickAdd = (m: Saved) => start(async () => {
+    await post({ bucket: current, name: m.name, kcal: m.kcal, protein: m.protein, carbs: m.carbs, savedMealId: m.id });
+    refresh();
+  });
+
+  const delLog = (id: string) => start(async () => { await fetch(`/api/food/${id}`, { method: "DELETE" }); refresh(); });
+  const delSaved = (id: string) => start(async () => { await fetch(`/api/food/saved/${id}`, { method: "DELETE" }); refresh(); });
+
+  const water = (ml: number) => start(async () => {
+    await fetch("/api/food/water", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ml }) });
+    refresh();
+  });
+
+  const saveTargets = () => start(async () => {
+    await fetch("/api/food/targets", { method: "PATCH", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ kcalTarget: t.kcal, proteinTarget: t.protein, carbsTarget: t.carbs, waterTargetMl: t.water }) });
+    setEditing(false); refresh();
+  });
+
+  const maxKcal = Math.max(targets.kcal, ...history.map((h) => h.kcal), 1);
 
   return (
     <div className="space-y-6">
-      {/* prompt */}
       {promptOpen && (
         <div className="rounded-2xl border border-lime/40 bg-lime/10 p-4">
           <p className="font-bold text-sm">🍽 What did you eat for {curLabel.toLowerCase()}?</p>
-          <p className="text-muted text-xs mt-0.5">Log it below so your day stays accurate.</p>
+          <p className="text-muted text-xs mt-0.5">Log it below or tap a saved meal.</p>
         </div>
       )}
 
-      {/* progress */}
-      <div className="grid grid-cols-2 gap-4">
-        <Bar label="Protein" value={protein} target={proteinTarget} unit="g" />
-        <Bar label="Calories" value={kcal} target={kcalTarget} unit="kcal" hot={kcal > kcalTarget} />
+      {/* macro progress */}
+      <div className="grid grid-cols-3 gap-3">
+        <Bar label="Protein" value={totals.protein} target={targets.protein} unit="grams" />
+        <Bar label="Carbs" value={totals.carbs} target={targets.carbs} unit="grams" />
+        <Bar label="Calories" value={totals.kcal} target={targets.kcal} unit="kcal" hot={totals.kcal > targets.kcal} />
       </div>
-      <button onClick={() => setEditing((e) => !e)} className="text-muted text-xs font-bold uppercase hover:text-ink">
-        {editing ? "close" : "edit targets"}
-      </button>
+
+      {/* water */}
+      <div className="rounded-2xl border border-line bg-surface p-5 space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-black uppercase tracking-widest text-lime">💧 Water</h2>
+          <span className="text-xs font-bold text-muted">
+            <span className={`text-xl font-black ${totals.waterMl >= targets.waterMl ? "text-lime" : "text-ink"}`}>{(totals.waterMl / 1000).toFixed(1)}</span> / {(targets.waterMl / 1000).toFixed(1)} L
+          </span>
+        </div>
+        <div className="h-2 rounded-full bg-surface2 overflow-hidden">
+          <div className="h-full rounded-full bg-lime" style={{ width: `${Math.min(100, Math.round((100 * totals.waterMl) / targets.waterMl))}%` }} />
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => water(250)} className="flex-1 bg-surface2 border border-line rounded-lg py-2 text-sm font-bold hover:border-lime">+ Glass (250ml)</button>
+          <button onClick={() => water(500)} className="flex-1 bg-surface2 border border-line rounded-lg py-2 text-sm font-bold hover:border-lime">+ Bottle (500ml)</button>
+          <button onClick={() => water(-1)} className="bg-surface2 border border-line rounded-lg px-3 text-sm font-bold text-muted hover:text-hot">undo</button>
+        </div>
+      </div>
+
+      <button onClick={() => setEditing((e) => !e)} className="text-muted text-xs font-bold uppercase hover:text-ink">{editing ? "close" : "edit targets"}</button>
       {editing && (
         <div className="flex flex-wrap items-end gap-2 rounded-2xl border border-line bg-surface p-4">
-          <label className="flex flex-col gap-1 text-[11px] font-black uppercase text-muted">Protein g
-            <input type="number" className={`${field} w-28`} value={pt} onChange={(e) => setPt(e.target.value)} />
-          </label>
-          <label className="flex flex-col gap-1 text-[11px] font-black uppercase text-muted">Calories
-            <input type="number" className={`${field} w-28`} value={kt} onChange={(e) => setKt(e.target.value)} />
-          </label>
+          {([["protein", "Protein g"], ["carbs", "Carbs g"], ["kcal", "Calories"], ["water", "Water ml"]] as const).map(([k, lab]) => (
+            <label key={k} className="flex flex-col gap-1 text-[11px] font-black uppercase text-muted">{lab}
+              <input type="number" className={`${field} w-24`} value={t[k]} onChange={(e) => setT({ ...t, [k]: e.target.value })} />
+            </label>
+          ))}
           <button onClick={saveTargets} className="bg-lime text-ground font-black uppercase text-xs px-4 py-2.5 rounded-lg">Save</button>
         </div>
       )}
 
-      {/* add */}
+      {/* saved meals quick-add */}
+      {saved.length > 0 && (
+        <div className="space-y-2">
+          <h2 className="text-xs font-black uppercase tracking-widest text-muted">Quick add</h2>
+          <div className="flex flex-wrap gap-2">
+            {saved.map((m) => (
+              <span key={m.id} className="group inline-flex items-center gap-1.5 bg-surface2 border border-line rounded-full pl-3 pr-1.5 py-1.5">
+                <button onClick={() => quickAdd(m)} className="text-sm font-bold hover:text-lime">{m.name} <span className="text-muted text-[11px]">{m.protein}p · {m.kcal}kcal</span></button>
+                <button onClick={() => delSaved(m.id)} className="text-muted hover:text-hot text-xs">✕</button>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* add form */}
       <div className="rounded-2xl border border-line bg-surface p-5 space-y-3">
         <div className="flex gap-1.5 flex-wrap">
           {buckets.map((b) => (
@@ -125,15 +156,18 @@ export function FoodClient({
           ))}
         </div>
         <div className="flex flex-wrap items-end gap-2">
-          <input className={`${field} flex-1 min-w-[160px]`} placeholder="Food (e.g. 2 roti + dal + curd)" value={name}
-            onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && name.trim() && add()} />
-          <input className={`${field} w-24`} type="number" placeholder="protein g" value={pr} onChange={(e) => setPr(e.target.value)} />
-          <input className={`${field} w-24`} type="number" placeholder="kcal" value={kc} onChange={(e) => setKc(e.target.value)} />
+          <input className={`${field} flex-1 min-w-[150px]`} placeholder="Food (e.g. 2 roti + dal)" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && name.trim() && add()} />
+          <input className={`${field} w-20`} type="number" placeholder="protein" value={pr} onChange={(e) => setPr(e.target.value)} />
+          <input className={`${field} w-20`} type="number" placeholder="carbs" value={cb} onChange={(e) => setCb(e.target.value)} />
+          <input className={`${field} w-20`} type="number" placeholder="kcal" value={kc} onChange={(e) => setKc(e.target.value)} />
           <button onClick={add} disabled={!name.trim()} className="bg-lime text-ground font-black uppercase text-xs px-4 py-2.5 rounded-lg disabled:opacity-40">Log</button>
         </div>
+        <label className="flex items-center gap-2 text-xs text-muted font-bold">
+          <input type="checkbox" checked={saveIt} onChange={(e) => setSaveIt(e.target.checked)} /> Save for quick-add
+        </label>
       </div>
 
-      {/* today's log by bucket */}
+      {/* today's log */}
       <div className="space-y-4">
         {buckets.map((b) => {
           const rows = logs.filter((l) => l.bucket === b.key);
@@ -146,16 +180,36 @@ export function FoodClient({
                   <div key={l.id} className="flex items-center gap-3 px-4 py-3">
                     <div className="min-w-0 flex-1">
                       <div className="font-bold truncate">{l.name}</div>
-                      <div className="text-muted text-[11px] font-semibold uppercase">{l.protein}g protein · {l.kcal} kcal</div>
+                      <div className="text-muted text-[11px] font-semibold uppercase">{l.protein}g protein · {l.carbs}g carbs · {l.kcal} kcal</div>
                     </div>
-                    <button onClick={() => del(l.id)} className="text-hot text-sm px-1 shrink-0">✕</button>
+                    <button onClick={() => delLog(l.id)} className="text-hot text-sm px-1 shrink-0">✕</button>
                   </div>
                 ))}
               </div>
             </div>
           );
         })}
-        {logs.length === 0 && <p className="text-muted text-sm">Nothing logged today. Add your first meal above.</p>}
+        {logs.length === 0 && <p className="text-muted text-sm">Nothing logged today. Add a meal or tap a quick-add above.</p>}
+      </div>
+
+      {/* 7-day history */}
+      <div className="rounded-2xl border border-line bg-surface p-5">
+        <h2 className="text-sm font-black uppercase tracking-widest text-lime mb-3">Last 7 days</h2>
+        <div className="flex items-end justify-between gap-2 h-28">
+          {history.map((h) => {
+            const day = new Date(h.date + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "short" })[0];
+            const hit = h.kcal > 0;
+            return (
+              <div key={h.date} className="flex-1 flex flex-col items-center gap-1.5">
+                <div className="w-full flex-1 flex items-end">
+                  <div className="w-full rounded-t bg-lime/70" style={{ height: `${Math.round((100 * h.kcal) / maxKcal)}%` }} title={`${h.kcal} kcal · ${h.protein}g protein`} />
+                </div>
+                <span className={`text-[10px] font-bold ${hit ? "text-muted" : "text-muted/40"}`}>{day}</span>
+              </div>
+            );
+          })}
+        </div>
+        <p className="text-muted text-[11px] mt-2 uppercase tracking-wide">Bar height = calories. Tap-hold for the day's numbers.</p>
       </div>
     </div>
   );
