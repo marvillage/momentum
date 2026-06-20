@@ -36,6 +36,7 @@ export function NewActivity({
   const [type, setType] = useState("SIMPLE");
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("");
+  const [link, setLink] = useState("");
   const [groupId, setGroupId] = useState("");
   const [area, setArea] = useState("HABIT");
   const [cadence, setCadence] = useState("DAILY");
@@ -52,7 +53,7 @@ export function NewActivity({
   const shownTracks = type === "PROBLEMS" ? codingTracks : type === "VIDEO" ? videoTracks : [];
 
   const reset = () => {
-    setType("SIMPLE"); setName(""); setIcon(""); setGroupId(""); setArea("HABIT");
+    setType("SIMPLE"); setName(""); setIcon(""); setLink(""); setGroupId(""); setArea("HABIT");
     setCadence("DAILY"); setDays(new Set([1, 2, 3, 4, 5])); setEveryNDays(2);
     setDurationMin(""); setTarget(1); setMinCount(""); setUnit(""); setTrack("");
   };
@@ -81,6 +82,7 @@ export function NewActivity({
           area,
           type,
           icon: icon.trim() || null,
+          link: link.trim() || null,
           groupId: groupId || null,
           cadence,
           daysOfWeek: cadence === "DAYS" ? [...days].sort((a, b) => a - b).join(",") : null,
@@ -138,6 +140,14 @@ export function NewActivity({
         <input className={`${field} w-16 text-center`} placeholder="🎯" value={icon} onChange={(e) => setIcon(e.target.value)} title="emoji" maxLength={2} />
         <input className={`${field} flex-1`} autoFocus placeholder="Name (e.g. LeetCode, Read 20 min)" value={name} onChange={(e) => setName(e.target.value)} />
       </div>
+
+      {/* quick-open link */}
+      <input
+        className={`${field} w-full`}
+        placeholder="Quick-open link (optional) — e.g. the doc you're writing"
+        value={link}
+        onChange={(e) => setLink(e.target.value)}
+      />
 
       {/* group + area */}
       <div className="grid grid-cols-2 gap-4">

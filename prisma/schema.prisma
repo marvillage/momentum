@@ -129,6 +129,7 @@ model Activity {
   type         String         @default("SIMPLE") // SIMPLE | PROBLEMS | VIDEO | GYM | WEEKLY
   name         String
   icon         String?
+  link         String? // a quick-open link for this activity (e.g. the doc you're writing)
   groupId      String?
   group        Group?         @relation(fields: [groupId], references: [id], onDelete: SetNull)
   cadence      String         @default("DAILY") // DAILY | WEEKDAYS | WEEKLY | DAYS | EVERY_N

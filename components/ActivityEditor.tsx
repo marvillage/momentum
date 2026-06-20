@@ -12,6 +12,7 @@ type Activity = {
   area: string;
   type: string;
   icon: string | null;
+  link: string | null;
   groupId: string | null;
   cadence: string;
   daysOfWeek: string | null;
@@ -127,6 +128,11 @@ export function ActivityEditor({ activity, groups }: { activity: Activity; group
             <span className={labelCls}>Duration (min)</span>
             <input type="number" min={0} className={fieldCls} placeholder="—" defaultValue={a.durationMin ?? ""}
               onBlur={(e) => patch({ durationMin: e.target.value ? parseInt(e.target.value, 10) : null })} />
+          </label>
+          <label className="flex flex-col gap-1.5 col-span-2">
+            <span className={labelCls}>Quick-open link</span>
+            <input className={fieldCls} placeholder="https://… (e.g. the doc you're writing)" defaultValue={a.link ?? ""}
+              onBlur={(e) => e.target.value !== (a.link ?? "") && patch({ link: e.target.value.trim() || null })} />
           </label>
           <label className="flex flex-col gap-1.5">
             <span className={labelCls}>Cadence</span>

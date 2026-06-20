@@ -15,6 +15,7 @@ type Task = {
     name: string;
     area: string;
     icon?: string | null;
+    link?: string | null;
     type?: string;
     targetCount: number;
     minCount: number | null;
@@ -37,7 +38,8 @@ export function TaskRow({ task, overdue = false }: { task: Task; overdue?: boole
   const isContent = task.activity.type === "PROBLEMS" || task.activity.type === "VIDEO";
   // With a content batch, the row header is the activity; otherwise the single item.
   const title = batch.length ? task.activity.name : task.item?.title || task.activity.name;
-  const url = batch.length ? undefined : task.item?.url ?? undefined;
+  // Open target: the day's item link, else the activity's quick-open link.
+  const url = batch.length ? undefined : task.item?.url ?? task.activity.link ?? undefined;
 
   const act = (action: string, itemId?: string) =>
     start(async () => {

@@ -32,6 +32,7 @@ export default async function ActivityDetail({ params }: { params: Promise<{ id:
           area: a.area,
           type: a.type,
           icon: a.icon,
+          link: a.link,
           groupId: a.groupId,
           cadence: a.cadence,
           daysOfWeek: a.daysOfWeek,

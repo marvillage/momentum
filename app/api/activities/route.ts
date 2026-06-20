@@ -33,6 +33,7 @@ export async function POST(req: Request) {
       area: body.area || "HABIT",
       type: body.type || "SIMPLE",
       icon: body.icon ?? null,
+      link: body.link ?? null,
       groupId: body.groupId ?? null,
       cadence: body.cadence || "DAILY",
       daysOfWeek: body.daysOfWeek ?? null,

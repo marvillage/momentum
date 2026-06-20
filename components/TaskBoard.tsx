@@ -16,6 +16,7 @@ function serialize(t: Task) {
       name: t.activity.name,
       area: t.activity.area,
       icon: t.activity.icon,
+      link: t.activity.link,
       type: t.activity.type,
       targetCount: t.activity.targetCount,
       minCount: t.activity.minCount,
