@@ -14,6 +14,7 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
   if (!group) notFound();
   if (group.kind === "GYM") redirect("/gym");
   if (group.kind === "FOOD") redirect("/food");
+  if (group.kind === "JIRA") redirect("/aecad");
 
   await ensureToday(user.id);
   const { todays, backlog } = await getDashboard(user.id, { groupId: group.id });

@@ -12,7 +12,7 @@ export async function Nav() {
         { label: "Today", href: "/" },
         ...groups.map((g) => ({
           label: g.name,
-          href: g.kind === "GYM" ? "/gym" : g.kind === "FOOD" ? "/food" : `/g/${g.slug}`,
+          href: g.kind === "GYM" ? "/gym" : g.kind === "FOOD" ? "/food" : g.kind === "JIRA" ? "/aecad" : `/g/${g.slug}`,
           icon: g.icon,
         })),
         { label: "Stats", href: "/stats" },

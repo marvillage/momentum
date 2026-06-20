@@ -30,6 +30,7 @@ const GROUPS = [
   { slug: "gym", name: "Gym", icon: "🏋️", kind: "GYM", sortOrder: 5 },
   { slug: "food", name: "Food", icon: "🍽", kind: "FOOD", sortOrder: 6 },
   { slug: "skin", name: "Skin", icon: "✨", kind: "NORMAL", sortOrder: 7 },
+  { slug: "aecad", name: "AECAD", icon: "📋", kind: "JIRA", sortOrder: 8 },
 ];
 
 const SKINCARE = [
