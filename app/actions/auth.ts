@@ -60,3 +60,11 @@ export async function completeOnboarding() {
   await prisma.user.update({ where: { id: user.id }, data: { onboarded: true } });
   redirect("/");
 }
+
+export async function deleteAccount() {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  await prisma.user.delete({ where: { id: user.id } }); // cascades to all their data
+  (await cookies()).delete(SESSION_COOKIE);
+  redirect("/login");
+}

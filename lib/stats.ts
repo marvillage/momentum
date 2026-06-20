@@ -1,5 +1,5 @@
 import { prisma } from "./db";
-import { todayStr, addDays } from "./date";
+import { todayStr, addDays, dowOf } from "./date";
 
 export type ActivityStat = {
   id: string;
@@ -101,6 +101,20 @@ export async function getStats(userId: string) {
     cur = addDays(cur, 1);
   }
 
+  // Completion rate by weekday (Mon..Sun) — surfaces your strongest/weakest days.
+  const dowAgg = Array.from({ length: 8 }, () => ({ t: 0, d: 0 })); // index 1..7
+  for (const t of tasks) {
+    const wd = dowOf(t.date);
+    dowAgg[wd].t++;
+    if (t.status === "DONE") dowAgg[wd].d++;
+  }
+  const LABELS = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const byWeekday = [1, 2, 3, 4, 5, 6, 7].map((n) => ({
+    label: LABELS[n],
+    rate: dowAgg[n].t ? Math.round((100 * dowAgg[n].d) / dowAgg[n].t) : 0,
+    total: dowAgg[n].t,
+  }));
+
   const totalsDone = perActivity.reduce((s, a) => s + a.doneCount, 0);
-  return { totals: { done: totalsDone, activities: perActivity.length }, perActivity, heatmap };
+  return { totals: { done: totalsDone, activities: perActivity.length }, perActivity, heatmap, byWeekday };
 }

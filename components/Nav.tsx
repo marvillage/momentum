@@ -17,6 +17,7 @@ export async function Nav() {
         })),
         { label: "Stats", href: "/stats" },
         { label: "Manage", href: "/activities" },
+        { label: "Profile", href: "/profile" },
       ]
     : [];
 

@@ -8,7 +8,10 @@ export const dynamic = "force-dynamic";
 
 export default async function StatsPage() {
   const user = await requireUser();
-  const [{ totals, perActivity, heatmap }, game] = await Promise.all([getStats(user.id), getGameState(user.id)]);
+  const [{ totals, perActivity, heatmap, byWeekday }, game] = await Promise.all([getStats(user.id), getGameState(user.id)]);
+  const ranked = [...byWeekday].filter((d) => d.total > 0).sort((a, b) => b.rate - a.rate);
+  const best = ranked[0];
+  const worst = ranked[ranked.length - 1];
   const activeStreaks = perActivity.filter((a) => a.active);
 
   return (
@@ -38,6 +41,29 @@ export default async function StatsPage() {
           </div>
         </div>
       </section>
+
+      {/* weekday insight */}
+      {best && (
+        <section>
+          <h2 className="text-sm font-black uppercase tracking-widest text-lime mb-3">By weekday</h2>
+          <div className="rounded-2xl border border-line bg-surface p-5">
+            <div className="flex items-end justify-between gap-2 h-24">
+              {byWeekday.map((d) => (
+                <div key={d.label} className="flex-1 flex flex-col items-center gap-1.5">
+                  <div className="w-full flex-1 flex items-end">
+                    <div className="w-full rounded-t bg-lime/70" style={{ height: `${d.rate}%` }} title={`${d.rate}% completed`} />
+                  </div>
+                  <span className="text-[10px] font-bold text-muted">{d.label[0]}</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-muted text-[11px] mt-3 uppercase tracking-wide font-semibold">
+              Strongest: <span className="text-lime">{best.label} ({best.rate}%)</span>
+              {worst && worst.label !== best.label ? <> · Weakest: <span className="text-hot">{worst.label} ({worst.rate}%)</span></> : null}
+            </p>
+          </div>
+        </section>
+      )}
 
       {/* badges */}
       <section>
