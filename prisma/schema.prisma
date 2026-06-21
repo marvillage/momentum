@@ -34,7 +34,17 @@ model User {
   waterLogs    WaterLog[]
   setLogs      SetLog[]
   pushSubs     PushSubscription[]
+  jiraSnapshot JiraSnapshot?
   settings     Settings?
+}
+
+// A cached snapshot of the user's Jira sprint (used until live OAuth is wired).
+model JiraSnapshot {
+  id       String   @id @default(cuid())
+  userId   String   @unique
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  data     String // JSON: { sprint:{name,startDate,endDate}, issues:[...] }
+  syncedAt DateTime @default(now())
 }
 
 // A browser/device push subscription (Web Push).
