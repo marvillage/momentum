@@ -2,7 +2,8 @@ import { TaskRow } from "./TaskRow";
 import type { getDashboard } from "@/lib/planner";
 
 type Dash = Awaited<ReturnType<typeof getDashboard>>;
-type Task = Dash["todays"][number];
+// backlog has the looser activity shape (no nested metrics); todays satisfies it too.
+type Task = Dash["backlog"][number];
 
 function serialize(t: Task) {
   return {
@@ -25,6 +26,7 @@ function serialize(t: Task) {
     item: t.item ? { title: t.item.title, url: t.item.url } : null,
     batch: t.batch ?? [],
     gym: t.gym ?? [],
+    metrics: t.metrics ?? [],
   };
 }
 

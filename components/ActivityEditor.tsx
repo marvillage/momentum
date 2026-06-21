@@ -25,7 +25,10 @@ type Activity = {
   active: boolean;
   rollover: boolean;
   items: Item[];
+  metrics: { id: string; label: string; unit: string | null; kind: string }[];
 };
+
+const METRIC_KINDS = ["NUMBER", "COUNT", "WEIGHT", "DURATION", "RATING"];
 
 const fieldCls =
   "bg-surface2 border border-line rounded-lg px-3 py-2 text-sm text-ink focus:border-lime outline-none";
@@ -73,6 +76,25 @@ export function ActivityEditor({ activity, groups }: { activity: Activity; group
   const [mode, setMode] = useState<"append" | "replace">("append");
   const [msg, setMsg] = useState("");
   const [yt, setYt] = useState("");
+  const [mLabel, setMLabel] = useState("");
+  const [mUnit, setMUnit] = useState("");
+  const [mKind, setMKind] = useState("NUMBER");
+
+  const addMetric = () =>
+    start(async () => {
+      await fetch("/api/metrics", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ activityId: a.id, label: mLabel, unit: mUnit, kind: mKind }),
+      });
+      setMLabel(""); setMUnit(""); setMKind("NUMBER"); router.refresh();
+    });
+
+  const delMetric = (id: string) =>
+    start(async () => {
+      await fetch(`/api/metrics/${id}`, { method: "DELETE" });
+      router.refresh();
+    });
 
   const importYt = () =>
     start(async () => {
@@ -338,6 +360,36 @@ export function ActivityEditor({ activity, groups }: { activity: Activity; group
             ))}
           </div>
         )}
+      </div>
+
+      {/* custom parameters (metrics) */}
+      <div className="rounded-2xl border border-line bg-surface p-5 space-y-4">
+        <h2 className="text-sm font-black uppercase tracking-widest text-lime">Custom parameters</h2>
+        <p className="text-muted text-sm">
+          Track any numbers for this activity — distance, pages, weight, mood… You log them daily on Today, and each gets auto-insights.
+        </p>
+
+        {activity.metrics.length > 0 && (
+          <div className="rounded-xl border border-line divide-y divide-line overflow-hidden">
+            {activity.metrics.map((m) => (
+              <div key={m.id} className="flex items-center gap-2 px-3 py-2.5 text-sm">
+                <span className="flex-1 font-bold truncate">{m.label}</span>
+                {m.unit && <span className="text-muted text-xs">{m.unit}</span>}
+                <span className="text-muted text-[10px] uppercase font-bold">{m.kind}</span>
+                <button onClick={() => delMetric(m.id)} className="text-hot text-xs px-1">✕</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-end gap-2">
+          <input className={`${fieldCls} flex-1 min-w-[140px]`} placeholder="Parameter (e.g. Distance, Pages, Mood)" value={mLabel} onChange={(e) => setMLabel(e.target.value)} />
+          <input className={`${fieldCls} w-24`} placeholder="unit (km…)" value={mUnit} onChange={(e) => setMUnit(e.target.value)} />
+          <select className={fieldCls} value={mKind} onChange={(e) => setMKind(e.target.value)}>
+            {METRIC_KINDS.map((k) => <option key={k}>{k}</option>)}
+          </select>
+          <button onClick={addMetric} disabled={!mLabel.trim()} className="bg-lime text-ground font-black uppercase text-xs px-4 py-2.5 rounded-lg disabled:opacity-40">Add</button>
+        </div>
       </div>
     </div>
   );

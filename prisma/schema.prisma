@@ -36,6 +36,7 @@ model User {
   pushSubs     PushSubscription[]
   jiraSnapshot JiraSnapshot?
   jiraNotes    JiraNote[]
+  metricEntries MetricEntry[]
   settings     Settings?
 }
 
@@ -171,10 +172,42 @@ model Activity {
   meta         String? // JSON blob for module-specific config
   items        Item[]
   tasks        TaskInstance[]
+  metrics      Metric[]
   createdAt    DateTime       @default(now())
 
   @@unique([userId, slug])
   @@index([groupId])
+}
+
+// A custom parameter an activity tracks (distance, pages, weight, mood…).
+model Metric {
+  id         String        @id @default(cuid())
+  activityId String
+  activity   Activity      @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  key        String
+  label      String
+  unit       String?
+  kind       String        @default("NUMBER") // NUMBER | COUNT | WEIGHT | DURATION | RATING
+  sortOrder  Int           @default(0)
+  entries    MetricEntry[]
+  createdAt  DateTime      @default(now())
+
+  @@index([activityId])
+}
+
+// A logged value for a metric on a given day (one per metric per day).
+model MetricEntry {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  metricId  String
+  metric    Metric   @relation(fields: [metricId], references: [id], onDelete: Cascade)
+  date      String // YYYY-MM-DD
+  value     Float
+  createdAt DateTime @default(now())
+
+  @@unique([metricId, date])
+  @@index([userId, date])
 }
 
 // Ordered catalog content fed into an Activity: a Striver problem, an ML video, an LLD pattern.

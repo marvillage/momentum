@@ -24,6 +24,7 @@ type Task = {
   item: { title: string; url: string | null } | null;
   batch?: BatchItem[];
   gym?: { name: string; sets: number; reps: number; weight: number }[];
+  metrics?: { id: string; label: string; unit: string | null; value: number | null }[];
 };
 
 export function TaskRow({ task, overdue = false }: { task: Task; overdue?: boolean }) {
@@ -37,6 +38,17 @@ export function TaskRow({ task, overdue = false }: { task: Task; overdue?: boole
   const counted = target > 1;
   const batch = task.batch ?? [];
   const gym = task.gym ?? [];
+  const metrics = task.metrics ?? [];
+
+  const logMetric = (metricId: string, value: string) =>
+    start(async () => {
+      await fetch("/api/metrics/log", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ metricId, value }),
+      });
+      router.refresh();
+    });
   const isContent = task.activity.type === "PROBLEMS" || task.activity.type === "VIDEO";
   // With a content batch, the row header is the activity; otherwise the single item.
   const title = batch.length ? task.activity.name : task.item?.title || task.activity.name;
@@ -175,6 +187,25 @@ export function TaskRow({ task, overdue = false }: { task: Task; overdue?: boole
       )}
       {task.activity.type === "GYM" && gym.length === 0 && (
         <div className="mt-1.5 ml-10 text-muted text-[11px]">Rest day — or add today&apos;s exercises in the Gym tab.</div>
+      )}
+
+      {/* custom parameters: log today's values */}
+      {metrics.length > 0 && (
+        <div className="mt-2.5 ml-10 flex flex-wrap gap-2">
+          {metrics.map((m) => (
+            <label key={m.id} className="flex items-center gap-1.5 bg-surface2 border border-line rounded-lg px-2.5 py-1.5">
+              <span className="text-[11px] font-bold text-muted uppercase">{m.label}</span>
+              <input
+                type="number"
+                defaultValue={m.value ?? ""}
+                onBlur={(e) => e.target.value !== String(m.value ?? "") && logMetric(m.id, e.target.value)}
+                className="w-16 bg-transparent text-sm outline-none focus:text-lime"
+                placeholder="—"
+              />
+              {m.unit && <span className="text-[11px] text-muted">{m.unit}</span>}
+            </label>
+          ))}
+        </div>
       )}
     </div>
   );

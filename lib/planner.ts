@@ -80,13 +80,17 @@ export async function getDashboard(userId: string, opts: { groupId?: string } = 
         { activity: actFilter },
       ],
     },
-    include: { activity: true, item: true },
+    include: {
+      activity: { include: { metrics: { orderBy: { sortOrder: "asc" }, include: { entries: { where: { date: today } } } } } },
+      item: true,
+    },
     orderBy: [{ activity: { sortOrder: "asc" } }],
   });
 
   // Enrich each task: content activities get their next N queue items; gym
-  // tasks get that weekday's saved exercises, shown inline on Today.
+  // tasks get that weekday's saved exercises; custom metrics get today's value.
   type Gym = { name: string; sets: number; reps: number; weight: number };
+  type MetricInput = { id: string; label: string; unit: string | null; value: number | null };
   const emptyBatch: { id: string; title: string; url: string | null }[] = [];
   const dow = dowOf(today);
   const todays = await Promise.all(
@@ -108,7 +112,13 @@ export async function getDashboard(userId: string, opts: { groupId?: string } = 
             select: { id: true, title: true, url: true },
           })
         : emptyBatch;
-      return { ...t, batch, gym };
+      const metrics: MetricInput[] = t.activity.metrics.map((m) => ({
+        id: m.id,
+        label: m.label,
+        unit: m.unit,
+        value: m.entries[0]?.value ?? null,
+      }));
+      return { ...t, batch, gym, metrics };
     })
   );
 
@@ -126,6 +136,7 @@ export async function getDashboard(userId: string, opts: { groupId?: string } = 
     ...t,
     batch: [] as { id: string; title: string; url: string | null }[],
     gym: [] as { name: string; sets: number; reps: number; weight: number }[],
+    metrics: [] as { id: string; label: string; unit: string | null; value: number | null }[],
   }));
 
   return { today, weekStart, todays, backlog };
