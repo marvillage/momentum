@@ -1,5 +1,6 @@
 import { requireUser } from "@/lib/auth";
 import { getSprintData } from "@/lib/jira";
+import { JiraIssueRow } from "@/components/JiraIssueRow";
 
 export const dynamic = "force-dynamic";
 
@@ -87,15 +88,7 @@ export default async function AecadPage() {
                     <h2 className="text-xs font-black uppercase tracking-widest text-muted mb-2">{CAT_LABEL[cat] || cat} · {rows.length}</h2>
                     <div className="rounded-2xl border border-line bg-surface divide-y divide-line overflow-hidden">
                       {rows.map((i) => (
-                        <a key={i.key} href={i.url} target="_blank" rel="noreferrer" className="flex items-center gap-3 px-4 py-3 hover:bg-surface2 transition-colors">
-                          <span className="text-[11px] font-black text-lime shrink-0 w-16">{i.key}</span>
-                          <div className="flex-1 min-w-0">
-                            <div className="truncate text-sm font-medium">{i.summary}</div>
-                            <div className="text-muted text-[10px] uppercase font-bold tracking-wide">{i.type}</div>
-                          </div>
-                          {i.points != null && <span className="shrink-0 text-[11px] font-black uppercase bg-surface2 border border-line rounded-md px-2 py-1">{i.points} pt</span>}
-                          <span className="text-muted text-[10px] uppercase font-bold shrink-0">{i.status}</span>
-                        </a>
+                        <JiraIssueRow key={i.key} issue={i} />
                       ))}
                     </div>
                   </section>

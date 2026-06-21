@@ -18,7 +18,9 @@ export type SprintIssue = {
   status: string;
   category: "new" | "indeterminate" | "done" | "cancelled" | string;
   points: number | null;
+  epic: string | null;
   url: string;
+  note?: string | null;
 };
 
 type Stored = {
@@ -96,6 +98,14 @@ function normCategory(statusName: string, catKey: string): SprintIssue["category
   return (catKey as SprintIssue["category"]) || "new";
 }
 
+// Merge the user's personal notes onto the issues (notes outlive snapshots).
+async function attachNotes(userId: string, view: SprintView): Promise<SprintView> {
+  const notes = await prisma.jiraNote.findMany({ where: { userId } });
+  const map = new Map(notes.map((n) => [n.issueKey, n.note]));
+  view.issues = view.issues.map((i) => ({ ...i, note: map.get(i.key) ?? null }));
+  return view;
+}
+
 export async function getSprintData(userId: string): Promise<SprintData> {
   if (jiraEnabled()) {
     try {
@@ -106,13 +116,18 @@ export async function getSprintData(userId: string): Promise<SprintData> {
       );
       const sprint = sprints.values?.[0];
       if (!sprint) return { status: "no_sprint" };
-      const fieldsParam = ["summary", "status", "issuetype", spId].filter(Boolean).join(",");
+      const fieldsParam = ["summary", "status", "issuetype", "parent", spId].filter(Boolean).join(",");
       const jql = encodeURIComponent("assignee = currentUser() ORDER BY status ASC");
       const data = await jget<{ issues: { key: string; fields: Record<string, unknown> }[] }>(
         `/rest/agile/1.0/sprint/${sprint.id}/issue?jql=${jql}&fields=${fieldsParam}&maxResults=100`
       );
       const issues: SprintIssue[] = (data.issues || []).map((i) => {
-        const f = i.fields as { summary: string; issuetype?: { name: string }; status?: { name: string; statusCategory?: { key: string } } } & Record<string, unknown>;
+        const f = i.fields as {
+          summary: string;
+          issuetype?: { name: string };
+          status?: { name: string; statusCategory?: { key: string } };
+          parent?: { fields?: { summary?: string } };
+        } & Record<string, unknown>;
         return {
           key: i.key,
           summary: f.summary,
@@ -120,15 +135,12 @@ export async function getSprintData(userId: string): Promise<SprintData> {
           status: f.status?.name ?? "Unknown",
           category: normCategory(f.status?.name ?? "", f.status?.statusCategory?.key ?? "new"),
           points: spId ? ((f[spId] as number | null) ?? null) : null,
+          epic: f.parent?.fields?.summary ?? null,
           url: `${BASE}/browse/${i.key}`,
         };
       });
-      return {
-        status: "ok",
-        source: "live",
-        syncedAt: null,
-        view: toView({ sprint: { name: sprint.name, startDate: sprint.startDate ?? null, endDate: sprint.endDate ?? null, goal: sprint.goal ?? null }, issues }),
-      };
+      const view = toView({ sprint: { name: sprint.name, startDate: sprint.startDate ?? null, endDate: sprint.endDate ?? null, goal: sprint.goal ?? null }, issues });
+      return { status: "ok", source: "live", syncedAt: null, view: await attachNotes(userId, view) };
     } catch (e) {
       return { status: "error", error: (e as Error).message };
     }
@@ -139,7 +151,7 @@ export async function getSprintData(userId: string): Promise<SprintData> {
   if (!snap) return { status: "unconfigured" };
   try {
     const stored = JSON.parse(snap.data) as Stored;
-    return { status: "ok", source: "snapshot", syncedAt: snap.syncedAt.toISOString(), view: toView(stored) };
+    return { status: "ok", source: "snapshot", syncedAt: snap.syncedAt.toISOString(), view: await attachNotes(userId, toView(stored)) };
   } catch {
     return { status: "error", error: "Stored snapshot is corrupt." };
   }

@@ -35,7 +35,20 @@ model User {
   setLogs      SetLog[]
   pushSubs     PushSubscription[]
   jiraSnapshot JiraSnapshot?
+  jiraNotes    JiraNote[]
   settings     Settings?
+}
+
+// A personal note attached to a Jira ticket (survives snapshot refreshes).
+model JiraNote {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  issueKey  String
+  note      String
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, issueKey])
 }
 
 // A cached snapshot of the user's Jira sprint (used until live OAuth is wired).
