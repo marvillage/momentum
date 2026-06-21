@@ -2,7 +2,9 @@ import { prisma } from "@/lib/db";
 import { NewActivity } from "@/components/NewActivity";
 import { GroupManager } from "@/components/GroupManager";
 import { ManageActivityList } from "@/components/ManageActivityList";
+import { AiActivityBuilder } from "@/components/AiActivityBuilder";
 import { TRACK_SUMMARY } from "@/lib/tracks";
+import { aiEnabled } from "@/lib/llm";
 import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -44,6 +46,7 @@ export default async function Activities() {
         <p className="text-muted mt-2 text-sm">Create any activity, group it into a navbar section, set its frequency, target, and content.</p>
       </div>
 
+      <AiActivityBuilder enabled={aiEnabled()} />
       <NewActivity groups={groupOpts} tracks={TRACK_SUMMARY} />
       <GroupManager groups={groupRows} />
 
