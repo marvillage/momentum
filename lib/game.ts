@@ -1,10 +1,14 @@
 import { prisma } from "./db";
 import { todayStr, addDays, toDateStr } from "./date";
 
-// Simple metal tiers, keyed by the credited 30-day score.
+// 7 tiers, keyed by the credited 30-day score (high → low).
 export const TIERS = [
-  { min: 80, label: "Gold", emoji: "🥇", color: "#ffd23f" },
-  { min: 50, label: "Silver", emoji: "🥈", color: "#c8cdd6" },
+  { min: 96, label: "Immortal", emoji: "👑", color: "#ff4d6d" },
+  { min: 87, label: "Diamond", emoji: "💎", color: "#8ab4ff" },
+  { min: 75, label: "Platinum", emoji: "🛡️", color: "#3fd0c9" },
+  { min: 60, label: "Gold", emoji: "🥇", color: "#ffd23f" },
+  { min: 45, label: "Silver", emoji: "🥈", color: "#c8cdd6" },
+  { min: 30, label: "Bronze", emoji: "🥉", color: "#cd7f32" },
   { min: 0, label: "Iron", emoji: "⛏️", color: "#9a9a92" },
 ] as const;
 
